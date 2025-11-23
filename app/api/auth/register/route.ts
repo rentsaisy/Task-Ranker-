@@ -39,27 +39,40 @@ export async function POST(request: NextRequest) {
 
     // Insert new user
     const [result]: any = await pool.query(
-      'INSERT INTO users (name, email, password, image) VALUES (?, ?, ?, NULL)',
+      'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
       [name, email, hashedPassword]
     )
 
-    // Return user data
+    // Return user data (image will be handled on frontend as default person icon)
     return NextResponse.json(
       { 
         success: true,
         user: {
           id: result.insertId,
           name,
-          email,
-          image: null
+          email
         }
       },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error)
+    
+    // Provide more specific error messages
+    let errorMessage = 'An error occurred during registration'
+    
+    if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Database connection failed. Make sure MySQL is running in Laragon.'
+    } else if (error.code === 'ER_NO_SUCH_TABLE') {
+      errorMessage = 'Database tables not found. Please run the database setup SQL.'
+    } else if (error.code === 'ER_BAD_DB_ERROR') {
+      errorMessage = 'Database "taskranker_db" not found. Please create it in Laragon.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return NextResponse.json(
-      { error: 'An error occurred during registration' },
+      { error: errorMessage, details: error.code || error.message },
       { status: 500 }
     )
   }

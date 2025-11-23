@@ -1,19 +1,17 @@
 -- Database setup for Task Prioritization System
--- Run these commands in phpMyAdmin
+-- Run these commands in phpMyAdmin or Laragon's MySQL
 
 -- Create database (if it doesn't exist)
-CREATE DATABASE IF NOT EXISTS task_prioritization;
-USE task_prioritization;
+CREATE DATABASE IF NOT EXISTS taskranker_db;
+USE taskranker_db;
 
 -- Users table for profile and authentication
 CREATE TABLE IF NOT EXISTS users (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
-  image LONGTEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tasks table for task management
