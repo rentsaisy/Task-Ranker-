@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Brain, Mail, Lock, User, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Brain, Mail, Lock, User, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 
 export default function RegisterPage() {
@@ -16,6 +16,8 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -71,9 +73,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-3 overflow-hidden">
+    <div className="min-h-screen auth-gradient-bg flex items-center justify-center p-3 overflow-hidden relative">
+      {/* Floating shapes */}
+      <div className="floating-shape floating-shape-1" />
+      <div className="floating-shape floating-shape-2" />
+      <div className="floating-shape floating-shape-3" />
+      
       {/* Neural Network Background Pattern */}
-      <div className="fixed inset-0 neural-pattern opacity-30 pointer-events-none" />
+      <div className="fixed inset-0 neural-pattern opacity-20 pointer-events-none" />
       
       <div className="w-full max-w-md relative z-10">
         {/* Logo and Title */}
@@ -82,15 +89,15 @@ export default function RegisterPage() {
             <Brain className="w-5 h-5 text-white" />
           </div>
           <h1 className="text-xl font-bold text-foreground mb-0.5">
-            Task Prioritization System
+            Task Ranker
           </h1>
           <p className="text-xs text-muted-foreground">
-            ML-Powered Academic Management
+            Prioritize your tasks with ease
           </p>
         </div>
 
         {/* Register Card */}
-        <div className="bg-card border border-border rounded-2xl shadow-xl p-5">
+        <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-5">
           <div className="mb-3">
             <h2 className="text-lg font-bold text-foreground mb-0.5">Create Account</h2>
             <p className="text-xs text-muted-foreground">
@@ -116,7 +123,7 @@ export default function RegisterPage() {
                   id="name"
                   name="name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Aisyah Currents"
                   value={formData.name}
                   onChange={handleChange}
                   className="pl-8 h-9 text-sm"
@@ -153,13 +160,24 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-8 h-9 text-sm"
+                  className="pl-8 pr-8 h-9 text-sm"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -172,13 +190,24 @@ export default function RegisterPage() {
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="pl-8 h-9 text-sm"
+                  className="pl-8 pr-8 h-9 text-sm"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -206,7 +235,7 @@ export default function RegisterPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-3">
-          © 2025 Task Prioritization System. All rights reserved.
+          © 2025 Task Ranker. All rights reserved.
         </p>
       </div>
     </div>

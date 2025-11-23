@@ -5,24 +5,24 @@ import bcrypt from 'bcryptjs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password } = body
+    const { identifier, password } = body
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Username/Email and password are required' },
         { status: 400 }
       )
     }
 
-    // Find user by email
+    // Find user by email or name
     const [rows]: any = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
+      'SELECT * FROM users WHERE email = ? OR name = ?',
+      [identifier, identifier]
     )
 
     if (rows.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid username/email or password' },
         { status: 401 }
       )
     }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     if (!isValidPassword) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid username/email or password' },
         { status: 401 }
       )
     }

@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Brain, Mail, Lock, AlertCircle } from "lucide-react"
+import { Brain, Mail, Lock, AlertCircle, Eye, EyeOff, User } from "lucide-react"
 import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -24,7 +25,7 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier, password }),
       })
 
       const data = await response.json()
@@ -44,9 +45,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen auth-gradient-bg flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Floating shapes */}
+      <div className="floating-shape floating-shape-1" />
+      <div className="floating-shape floating-shape-2" />
+      <div className="floating-shape floating-shape-3" />
+      
       {/* Neural Network Background Pattern */}
-      <div className="fixed inset-0 neural-pattern opacity-30 pointer-events-none" />
+      <div className="fixed inset-0 neural-pattern opacity-20 pointer-events-none" />
       
       <div className="w-full max-w-md relative z-10">
         {/* Logo and Title */}
@@ -55,15 +61,15 @@ export default function LoginPage() {
             <Brain className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-1">
-            Task Prioritization System
+            Task Ranker
           </h1>
           <p className="text-xs text-muted-foreground">
-            ML-Powered Academic Management
+            Prioritize your tasks with ease
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-card border border-border rounded-2xl shadow-xl p-6">
+        <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-6">
           <div className="mb-5">
             <h2 className="text-xl font-bold text-foreground mb-1">Welcome Back</h2>
             <p className="text-xs text-muted-foreground">
@@ -80,17 +86,17 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-foreground text-sm">
-                Email Address
+              <Label htmlFor="identifier" className="text-foreground text-sm">
+                Username or Email
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="student@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="identifier"
+                  type="text"
+                  placeholder="username or email@example.com"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="pl-9 h-10"
                   required
                 />
@@ -105,13 +111,24 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9 h-10"
+                  className="pl-9 pr-9 h-10"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -139,7 +156,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-4">
-          © 2025 Task Prioritization System. All rights reserved.
+          © 2025 Task Ranker. All rights reserved.
         </p>
       </div>
     </div>
