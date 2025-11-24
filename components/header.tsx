@@ -1,15 +1,25 @@
 "use client"
 
-import { Menu, Brain } from "lucide-react"
+import { Menu, Brain, LayoutDashboard, Plus, List, Settings, Info } from "lucide-react"
 import { useState, useEffect } from "react"
 import ProfileModal from "./profile-modal"
 
 interface HeaderProps {
   sidebarOpen: boolean
   onToggleSidebar: (open: boolean) => void
+  currentPage: string
 }
 
-export default function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
+const pageConfig: Record<string, { label: string; icon: any; description: string }> = {
+  dashboard: { label: "Dashboard", icon: LayoutDashboard, description: "Overview of your task prioritization at a glance" },
+  input: { label: "Input Task", icon: Plus, description: "Add new tasks to your list" },
+  tasks: { label: "Task List", icon: List, description: "View and manage all your tasks" },
+  results: { label: "ML Priority Results", icon: Brain, description: "Machine Learning analysis of your task priorities" },
+  settings: { label: "Settings", icon: Settings, description: "Customize your preferences" },
+  about: { label: "About", icon: Info, description: "Learn more about Task Ranker" }
+}
+
+export default function Header({ sidebarOpen, onToggleSidebar, currentPage }: HeaderProps) {
   const [profile, setProfile] = useState<{ name?: string; image?: string } | null>(null)
 
   useEffect(() => {
@@ -49,6 +59,9 @@ export default function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
 
   const displayName = profile?.name || "Student"
   const initial = (profile?.name || "Student").charAt(0).toUpperCase()
+  
+  const currentPageConfig = pageConfig[currentPage] || pageConfig.dashboard
+  const PageIcon = currentPageConfig.icon
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-40 shadow-sm">
@@ -61,15 +74,18 @@ export default function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
           <Menu className="w-5 h-5 text-foreground" />
         </button>
 
-        {/* Center - Logo and Title */}
+        {/* Center - Current Page Title with Icon */}
         <div className="flex items-center gap-4 flex-1 md:flex-initial">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary via-accent to-ml-accent rounded-lg flex items-center justify-center shadow-md smooth-transition hover:scale-105">
-              <Brain className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 bg-gradient-to-br from-primary via-accent to-ml-accent rounded-lg flex items-center justify-center shadow-md smooth-transition">
+              <PageIcon className="w-5 h-5 text-white" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-foreground">Task Prioritization System</h1>
-              <p className="text-xs text-muted-foreground">ML-Powered Academic Management</p>
+              <h1 className="text-xl font-bold text-foreground">{currentPageConfig.label}</h1>
+              <p className="text-xs text-muted-foreground">{currentPageConfig.description}</p>
+            </div>
+            <div className="sm:hidden">
+              <h1 className="text-lg font-bold text-foreground">{currentPageConfig.label}</h1>
             </div>
           </div>
         </div>

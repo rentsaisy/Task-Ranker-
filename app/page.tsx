@@ -41,7 +41,7 @@ export default function Home() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <Header sidebarOpen={sidebarOpen} onToggleSidebar={setSidebarOpen} />
+        <Header sidebarOpen={sidebarOpen} onToggleSidebar={setSidebarOpen} currentPage={currentPage} />
 
         {/* Main Panel */}
         <main className="flex-1 overflow-auto">

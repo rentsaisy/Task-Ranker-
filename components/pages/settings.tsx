@@ -21,16 +21,6 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
       <div className="max-w-2xl mx-auto space-y-8">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-md">
-              <Settings className="w-6 h-6 text-foreground" />
-            </div>
-            <h1 className="text-4xl font-bold text-foreground">Settings</h1>
-          </div>
-          <p className="text-muted-foreground ml-13">Customize your preferences</p>
-        </div>
 
         {/* Settings Sections */}
         <div className="space-y-6">

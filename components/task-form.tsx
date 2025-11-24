@@ -29,15 +29,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
 
   return (
     <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition h-fit">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-md">
-          <Brain className="w-5 h-5 text-foreground" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-foreground">Add New Task</h2>
-          <p className="text-xs text-muted-foreground">Provide task details for ML analysis</p>
-        </div>
-      </div>
+      
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Task Name */}
