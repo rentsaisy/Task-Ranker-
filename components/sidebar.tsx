@@ -39,7 +39,7 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
         {/* Toggle button on border */}
         <button
           onClick={onToggle}
-          className="hidden md:flex absolute -right-4 top-20 w-8 h-8 bg-card border border-border rounded-full items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 z-50"
+          className="hidden md:flex absolute -right-4 top-6 w-8 h-8 bg-card border border-border rounded-full items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 z-50"
         >
           {open ? (
             <ChevronLeft className="w-4 h-4 text-foreground" />
@@ -89,7 +89,7 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border space-y-3">
+        <div className="p-4 border-t border-border">
           {/* Logout Button */}
           <button
             onClick={handleLogout}
@@ -99,23 +99,6 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
             <LogOut className="w-5 h-5 flex-shrink-0" />
             {open && <span className="font-medium text-sm">Logout</span>}
           </button>
-          
-          {open && (
-            <>
-              <div className="bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/30 rounded-lg p-4 relative overflow-hidden">
-                <div className="absolute inset-0 neural-pattern opacity-30" />
-                <div className="relative z-10">
-                  <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1">
-                    <Brain className="w-3 h-3" /> ML Engine
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Powered by machine learning for optimal task prioritization
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground text-center">Version 1.0.0</p>
-            </>
-          )}
         </div>
       </aside>
     </>

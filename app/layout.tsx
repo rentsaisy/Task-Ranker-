@@ -11,7 +11,7 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: "Task Prioritization System",
+  title: "Task Ranker",
   description: "ML-powered academic task prioritization dashboard",
   generator: "v0.app",
 }
