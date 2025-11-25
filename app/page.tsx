@@ -36,7 +36,7 @@ export default function Home() {
   return (
     <div className="flex h-screen bg-background neural-bg">
       {/* Sidebar */}
-      <Sidebar open={sidebarOpen} currentPage={currentPage} onNavigate={setCurrentPage} />
+      <Sidebar open={sidebarOpen} currentPage={currentPage} onNavigate={setCurrentPage} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
