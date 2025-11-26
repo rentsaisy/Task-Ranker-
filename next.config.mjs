@@ -6,6 +6,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    serverComponentsExternalPackages: ['node-cron', 'twilio'],
+  },
 }
 
 export default nextConfig
