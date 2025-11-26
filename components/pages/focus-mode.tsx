@@ -92,21 +92,26 @@ export default function FocusModePage() {
   }, [status])
 
   /**
-   * Load user's tasks
+   * Load user's tasks from database
    */
   async function loadTasks() {
     try {
-      // Mock data - replace with actual API call
-      const mockTasks: Task[] = [
-        { id: 1, name: "Advanced Calculus Assignment", taskType: "Assignment", priority: 92 },
-        { id: 2, name: "Physics Lab Report", taskType: "Report", priority: 78 },
-        { id: 3, name: "Literature Essay", taskType: "Assignment", priority: 58 },
-      ]
-      setTasks(mockTasks)
+      const response = await fetch(`/api/tasks?userId=${userId}`)
+      const data = await response.json()
+      
+      // Transform data to match Task interface
+      const transformedTasks: Task[] = data.map((task: any) => ({
+        id: task.id,
+        name: task.title,
+        taskType: task.task_type_name || 'Other',
+        priority: Math.round(task.priority_score || 0)
+      }))
+      
+      setTasks(transformedTasks)
       
       // Auto-select highest priority task
-      if (mockTasks.length > 0) {
-        setSelectedTask(mockTasks[0])
+      if (transformedTasks.length > 0) {
+        setSelectedTask(transformedTasks[0])
       }
     } catch (error) {
       console.error('Error loading tasks:', error)

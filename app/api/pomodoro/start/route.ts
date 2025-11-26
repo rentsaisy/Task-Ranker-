@@ -2,13 +2,12 @@
  * API Route: Start Pomodoro Session
  * POST /api/pomodoro/start
  * 
- * Starts a new Pomodoro session and schedules WhatsApp notification
+ * Starts a new Pomodoro session
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { startPomodoroSession } from '@/lib/pomodoro-scheduler';
-import { sendSessionStartedNotification } from '@/lib/whatsapp-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,21 +73,7 @@ export async function POST(request: NextRequest) {
 
     const taskName = tasks[0]?.name || 'Unknown Task';
 
-    // Send WhatsApp notification that session started
-    const [users] = await pool.query<any[]>(
-      `SELECT phone_number, whatsapp_verified FROM users WHERE id = ?`,
-      [userId]
-    );
-
-    if (users[0]?.whatsapp_verified && users[0]?.phone_number) {
-      await sendSessionStartedNotification(
-        userId,
-        users[0].phone_number,
-        taskName,
-        sessionDuration,
-        sessionId
-      );
-    }
+    // Session started successfully (WhatsApp notifications removed)
 
     return NextResponse.json({
       success: true,

@@ -2,43 +2,73 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Brain, TrendingUp, Zap, Calendar } from "lucide-react"
 import TaskForm from "./task-form"
 import PriorityTable from "./priority-table"
 import PriorityChart from "./priority-chart"
 
 export default function Dashboard() {
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      name: "Advanced Calculus Assignment",
-      deadline: "2024-12-20",
-      taskType: "Assignment",
-      priority: 92,
-    },
-    {
-      id: 2,
-      name: "Physics Lab Report",
-      deadline: "2024-12-18",
-      taskType: "Report",
-      priority: 78,
-    },
-    {
-      id: 3,
-      name: "Literature Essay",
-      deadline: "2024-12-22",
-      taskType: "Assignment",
-      priority: 58,
-    },
-  ])
+  const [tasks, setTasks] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleAddTask = (newTask: any) => {
-    setTasks([...tasks, { ...newTask, id: tasks.length + 1, priority: Math.random() * 100 }])
+  // Fetch tasks from database
+  useEffect(() => {
+    fetchTasks()
+  }, [])
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/tasks?userId=1') // TODO: Get userId from auth
+      const data = await response.json()
+      setTasks(data)
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const highPriorityCount = tasks.filter((t) => t.priority >= 80).length
-  const avgPriority = Math.round(tasks.reduce((a, b) => a + b.priority, 0) / tasks.length)
+  const handleAddTask = async (newTask: any) => {
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: 1, // TODO: Get from auth
+          task_type_id: newTask.task_type_id,
+          title: newTask.name,
+          due_date: newTask.deadline,
+        }),
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Refresh task list
+        fetchTasks()
+      }
+    } catch (error) {
+      console.error('Error adding task:', error)
+    }
+  }
+
+  const highPriorityCount = tasks.filter((t) => (t.priority_score || 0) >= 80).length
+  const avgPriority = tasks.length > 0 
+    ? Math.round(tasks.reduce((a, b) => a + (b.priority_score || 0), 0) / tasks.length)
+    : 0
+
+  if (loading) {
+    return (
+      <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading tasks...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">

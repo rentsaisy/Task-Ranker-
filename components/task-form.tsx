@@ -2,39 +2,67 @@
 
 import type * as React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Calendar, Brain, Sparkles } from "lucide-react"
 
 interface TaskFormProps {
   onAddTask: (task: any) => void
 }
 
+interface TaskType {
+  id: number
+  name: string
+  default_difficulty: number
+  default_weight: number
+}
+
 export default function TaskForm({ onAddTask }: TaskFormProps) {
   const [formData, setFormData] = useState({
     name: "",
-    taskType: "Assignment",
+    task_type_id: "",
     deadline: "",
   })
 
-  const taskTypes = [
-    "Assignment",
-    "PPT/Presentation", 
-    "Report",
-    "Practicum/Lab",
-    "Exam/Test",
-    "Project",
-    "Reminder",
-    "Other"
-  ]
+  const [taskTypes, setTaskTypes] = useState<TaskType[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchTaskTypes()
+  }, [])
+
+  const fetchTaskTypes = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/task-types?userId=1')
+      const data = await response.json()
+      setTaskTypes(data)
+      
+      // Set first task type as default
+      if (data.length > 0) {
+        setFormData(prev => ({ ...prev, task_type_id: data[0].id.toString() }))
+      }
+    } catch (error) {
+      console.error('Error fetching task types:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name || !formData.deadline) {
+    if (!formData.name || !formData.deadline || !formData.task_type_id) {
       alert("Please fill in all fields")
       return
     }
-    onAddTask(formData)
-    setFormData({ name: "", taskType: "Assignment", deadline: "" })
+    onAddTask({
+      ...formData,
+      task_type_id: parseInt(formData.task_type_id)
+    })
+    setFormData({ 
+      name: "", 
+      task_type_id: taskTypes.length > 0 ? taskTypes[0].id.toString() : "", 
+      deadline: "" 
+    })
   }
 
   return (
@@ -59,13 +87,22 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
         <div>
           <label className="block text-sm font-semibold text-foreground mb-2">Task Type</label>
           <select
-            value={formData.taskType}
-            onChange={(e) => setFormData({ ...formData, taskType: e.target.value })}
+            value={formData.task_type_id}
+            onChange={(e) => setFormData({ ...formData, task_type_id: e.target.value })}
             className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
+            disabled={loading || taskTypes.length === 0}
           >
-            {taskTypes.map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
+            {loading ? (
+              <option value="">Loading task types...</option>
+            ) : taskTypes.length === 0 ? (
+              <option value="">No task types available - Create one first</option>
+            ) : (
+              taskTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name} (Difficulty: {type.default_difficulty}/10, Weight: {type.default_weight}/10)
+                </option>
+              ))
+            )}
           </select>
         </div>
 

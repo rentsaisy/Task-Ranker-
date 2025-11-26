@@ -1,27 +1,18 @@
 "use client"
 
 import { Plus, Brain, CheckCircle, Trash2, Edit, AlertTriangle } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface TaskType {
   id: number
   name: string
-  difficulty: number
-  weight: number
+  default_difficulty: number
+  default_weight: number
 }
 
 export default function InputTaskTypePage() {
-  const [taskTypes, setTaskTypes] = useState<TaskType[]>([
-    { id: 1, name: "Assignment", difficulty: 3, weight: 5 },
-    { id: 2, name: "PPT/Presentation", difficulty: 2, weight: 4 },
-    { id: 3, name: "Report", difficulty: 4, weight: 7 },
-    { id: 4, name: "Practicum/Lab", difficulty: 3, weight: 6 },
-    { id: 5, name: "Exam/Test", difficulty: 5, weight: 9 },
-    { id: 6, name: "Project", difficulty: 5, weight: 10 },
-    { id: 7, name: "Reminder", difficulty: 1, weight: 2 },
-    { id: 8, name: "Other", difficulty: 2, weight: 3 },
-  ])
-
+  const [taskTypes, setTaskTypes] = useState<TaskType[]>([])
+  const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     name: "",
     difficulty: 3,
@@ -33,42 +24,79 @@ export default function InputTaskTypePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingTaskType, setDeletingTaskType] = useState<TaskType | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchTaskTypes()
+  }, [])
+
+  const fetchTaskTypes = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/task-types?userId=1')
+      const data = await response.json()
+      setTaskTypes(data)
+    } catch (error) {
+      console.error('Error fetching task types:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name) {
       alert("Please enter a task type name")
       return
     }
 
-    if (editingId) {
-      // Update existing task type
-      setTaskTypes(taskTypes.map(tt => 
-        tt.id === editingId 
-          ? { ...tt, name: formData.name, difficulty: formData.difficulty, weight: formData.weight }
-          : tt
-      ))
-      setEditingId(null)
-    } else {
-      // Add new task type
-      const newTaskType: TaskType = {
-        id: Math.max(...taskTypes.map(t => t.id), 0) + 1,
-        name: formData.name,
-        difficulty: formData.difficulty,
-        weight: formData.weight,
-      }
-      setTaskTypes([...taskTypes, newTaskType])
-    }
+    try {
+      if (editingId) {
+        // Update existing task type
+        const response = await fetch('/api/task-types', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingId,
+            name: formData.name,
+            default_difficulty: formData.difficulty,
+            default_weight: formData.weight,
+          }),
+        })
 
-    setFormData({ name: "", difficulty: 3, weight: 5 })
-    setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 2000)
+        if (response.ok) {
+          await fetchTaskTypes()
+          setEditingId(null)
+        }
+      } else {
+        // Add new task type
+        const response = await fetch('/api/task-types', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: 1, // TODO: Get from auth
+            name: formData.name,
+            default_difficulty: formData.difficulty,
+            default_weight: formData.weight,
+          }),
+        })
+
+        if (response.ok) {
+          await fetchTaskTypes()
+        }
+      }
+
+      setFormData({ name: "", difficulty: 3, weight: 5 })
+      setSubmitted(true)
+      setTimeout(() => setSubmitted(false), 2000)
+    } catch (error) {
+      console.error('Error saving task type:', error)
+    }
   }
 
   const handleEdit = (taskType: TaskType) => {
     setFormData({
       name: taskType.name,
-      difficulty: taskType.difficulty,
-      weight: taskType.weight,
+      difficulty: taskType.default_difficulty,
+      weight: taskType.default_weight,
     })
     setEditingId(taskType.id)
   }
@@ -78,9 +106,20 @@ export default function InputTaskTypePage() {
     setShowDeleteModal(true)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deletingTaskType) {
-      setTaskTypes(taskTypes.filter(tt => tt.id !== deletingTaskType.id))
+      try {
+        const response = await fetch(`/api/task-types?id=${deletingTaskType.id}`, {
+          method: 'DELETE',
+        })
+
+        if (response.ok) {
+          await fetchTaskTypes()
+        }
+      } catch (error) {
+        console.error('Error deleting task type:', error)
+      }
+      
       setShowDeleteModal(false)
       setDeletingTaskType(null)
     }
@@ -94,6 +133,17 @@ export default function InputTaskTypePage() {
   const handleCancelEdit = () => {
     setEditingId(null)
     setFormData({ name: "", difficulty: 3, weight: 5 })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading task types...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -255,15 +305,15 @@ export default function InputTaskTypePage() {
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">Difficulty:</span>
                             <div className="flex gap-1">
-                              {Array.from({ length: taskType.difficulty }).map((_, i) => (
+                              {Array.from({ length: taskType.default_difficulty }).map((_, i) => (
                                 <div key={i} className="w-1.5 h-4 bg-primary rounded-sm" />
                               ))}
                             </div>
-                            <span className="text-primary font-semibold">{taskType.difficulty}/5</span>
+                            <span className="text-primary font-semibold">{taskType.default_difficulty}/10</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">Weight:</span>
-                            <span className="text-accent font-semibold">{taskType.weight}/10</span>
+                            <span className="text-accent font-semibold">{taskType.default_weight}/10</span>
                           </div>
                         </div>
                       </div>

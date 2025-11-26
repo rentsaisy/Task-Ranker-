@@ -4,10 +4,14 @@ import { TrendingUp } from "lucide-react"
 
 interface Task {
   id: number
-  name: string
-  deadline: string
-  taskType: string
-  priority: number
+  title?: string
+  name?: string
+  due_date?: string
+  deadline?: string
+  task_type_name?: string
+  taskType?: string
+  priority_score?: number
+  priority?: number
 }
 
 interface PriorityTableProps {
@@ -15,7 +19,9 @@ interface PriorityTableProps {
 }
 
 export default function PriorityTable({ tasks }: PriorityTableProps) {
-  const sortedTasks = [...tasks].sort((a, b) => b.priority - a.priority)
+  const sortedTasks = [...tasks].sort((a, b) => 
+    (b.priority_score || b.priority || 0) - (a.priority_score || a.priority || 0)
+  )
 
   const getPriorityColor = (priority: number) => {
     if (priority >= 80) return "bg-red-100 text-red-700"
@@ -41,30 +47,39 @@ export default function PriorityTable({ tasks }: PriorityTableProps) {
           </tr>
         </thead>
         <tbody>
-          {sortedTasks.map((task, index) => (
-            <tr key={task.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
-              <td className="py-3 px-4">
-                <div className="flex items-start gap-2">
-                  <div className="text-xs font-bold text-primary mt-1">#{index + 1}</div>
-                  <div>
-                    <p className="font-medium text-foreground">{task.name}</p>
+          {sortedTasks.map((task, index) => {
+            const taskName = task.title || task.name || 'Untitled'
+            const taskType = task.task_type_name || task.taskType || 'N/A'
+            const deadline = task.due_date || task.deadline || ''
+            const priority = task.priority_score || task.priority || 0
+            
+            return (
+              <tr key={task.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
+                <td className="py-3 px-4">
+                  <div className="flex items-start gap-2">
+                    <div className="text-xs font-bold text-primary mt-1">#{index + 1}</div>
+                    <div>
+                      <p className="font-medium text-foreground">{taskName}</p>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td className="py-3 px-4 text-muted-foreground">{task.taskType}</td>
-              <td className="py-3 px-4 text-muted-foreground">{new Date(task.deadline).toLocaleDateString()}</td>
-              <td className="py-3 px-4 text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <span
-                    className={`px-3 py-1 rounded-full font-semibold text-xs flex items-center gap-1 ${getPriorityColor(task.priority)}`}
-                  >
-                    <TrendingUp className="w-3 h-3" />
-                    {Math.round(task.priority)}%
-                  </span>
-                </div>
+                </td>
+                <td className="py-3 px-4 text-muted-foreground">{taskType}</td>
+                <td className="py-3 px-4 text-muted-foreground">
+                  {deadline ? new Date(deadline).toLocaleDateString() : 'No deadline'}
+                </td>
+                <td className="py-3 px-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <span
+                      className={`px-3 py-1 rounded-full font-semibold text-xs flex items-center gap-1 ${getPriorityColor(priority)}`}
+                    >
+                      <TrendingUp className="w-3 h-3" />
+                      {Math.round(priority)}%
+                    </span>
+                  </div>
               </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>

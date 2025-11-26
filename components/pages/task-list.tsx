@@ -1,37 +1,83 @@
 "use client"
 
 import { List, Calendar, CheckCircle, Edit, Sparkles, Trophy } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface Task {
   id: number
-  name: string
-  deadline: string
-  taskType: string
+  title: string
+  due_date: string
+  task_type_name: string
+  priority_score: number
+  task_type_id?: number
 }
 
 export default function TaskListPage() {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, name: "Advanced Calculus Assignment", deadline: "2024-12-20", taskType: "Assignment" },
-    { id: 2, name: "Physics Lab Report", deadline: "2024-12-18", taskType: "Report" },
-    { id: 3, name: "Literature Essay", deadline: "2024-12-22", taskType: "Assignment" },
-  ])
-
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [taskTypes, setTaskTypes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showFinishModal, setShowFinishModal] = useState(false)
   const [finishingTask, setFinishingTask] = useState<Task | null>(null)
+
+  useEffect(() => {
+    fetchTasks()
+    fetchTaskTypes()
+  }, [])
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/tasks?userId=1')
+      const data = await response.json()
+      setTasks(data)
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchTaskTypes = async () => {
+    try {
+      const response = await fetch('/api/task-types?userId=1')
+      const data = await response.json()
+      setTaskTypes(data)
+    } catch (error) {
+      console.error('Error fetching task types:', error)
+    }
+  }
 
   const handleEdit = (task: Task) => {
     setEditingTask({ ...task })
     setShowEditModal(true)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingTask) {
-      setTasks(tasks.map(t => t.id === editingTask.id ? editingTask : t))
-      setShowEditModal(false)
-      setEditingTask(null)
+      try {
+        const response = await fetch('/api/tasks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingTask.id,
+            task_type_id: editingTask.task_type_id,
+            title: editingTask.title,
+            due_date: editingTask.due_date,
+          }),
+        })
+
+        const result = await response.json()
+        
+        if (result.success) {
+          await fetchTasks()
+          setShowEditModal(false)
+          setEditingTask(null)
+        }
+      } catch (error) {
+        console.error('Error updating task:', error)
+      }
     }
   }
 
@@ -40,19 +86,40 @@ export default function TaskListPage() {
     setShowFinishModal(true)
   }
 
-  const confirmFinish = () => {
+  const confirmFinish = async () => {
     if (finishingTask) {
-      setTasks(tasks.filter(t => t.id !== finishingTask.id))
-      setTimeout(() => {
-        setShowFinishModal(false)
-        setFinishingTask(null)
-      }, 1500)
+      try {
+        const response = await fetch(`/api/tasks?id=${finishingTask.id}`, {
+          method: 'DELETE',
+        })
+
+        if (response.ok) {
+          setTimeout(() => {
+            fetchTasks()
+            setShowFinishModal(false)
+            setFinishingTask(null)
+          }, 1500)
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error)
+      }
     }
   }
 
   const cancelFinish = () => {
     setShowFinishModal(false)
     setFinishingTask(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading tasks...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -67,39 +134,57 @@ export default function TaskListPage() {
                 <tr className="border-b border-border bg-secondary/50">
                   <th className="text-left py-4 px-6 font-semibold text-foreground">Task Name</th>
                   <th className="text-left py-4 px-6 font-semibold text-foreground">Task Type</th>
+                  <th className="text-left py-4 px-6 font-semibold text-foreground">Priority</th>
                   <th className="text-left py-4 px-6 font-semibold text-foreground">Deadline</th>
                   <th className="text-center py-4 px-6 font-semibold text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id} className="border-b border-border hover:bg-secondary/50 smooth-transition">
-                    <td className="py-4 px-6 font-medium text-foreground">{task.name}</td>
-                    <td className="py-4 px-6 text-muted-foreground">{task.taskType}</td>
-                    <td className="py-4 px-6 text-muted-foreground flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(task.deadline).toLocaleDateString()}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => handleEdit(task)}
-                          className="p-2 hover:bg-primary/10 rounded-lg transition-colors smooth-transition"
-                          title="Edit task"
-                        >
-                          <Edit className="w-4 h-4 text-primary" />
-                        </button>
-                        <button 
-                          onClick={() => handleFinish(task)}
-                          className="p-2 hover:bg-accent/10 rounded-lg transition-colors smooth-transition"
-                          title="Mark as finished"
-                        >
-                          <CheckCircle className="w-4 h-4 text-accent" />
-                        </button>
-                      </div>
+                {tasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                      No tasks found. Create your first task!
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  tasks.map((task) => (
+                    <tr key={task.id} className="border-b border-border hover:bg-secondary/50 smooth-transition">
+                      <td className="py-4 px-6 font-medium text-foreground">{task.title}</td>
+                      <td className="py-4 px-6 text-muted-foreground">{task.task_type_name || 'N/A'}</td>
+                      <td className="py-4 px-6">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          (task.priority_score || 0) >= 80 ? 'bg-red-500/20 text-red-400' :
+                          (task.priority_score || 0) >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-green-500/20 text-green-400'
+                        }`}>
+                          {Math.round(task.priority_score || 0)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-muted-foreground flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(task.due_date).toLocaleDateString()}
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleEdit(task)}
+                            className="p-2 hover:bg-primary/10 rounded-lg transition-colors smooth-transition"
+                            title="Edit task"
+                          >
+                            <Edit className="w-4 h-4 text-primary" />
+                          </button>
+                          <button 
+                            onClick={() => handleFinish(task)}
+                            className="p-2 hover:bg-accent/10 rounded-lg transition-colors smooth-transition"
+                            title="Mark as finished"
+                          >
+                            <CheckCircle className="w-4 h-4 text-accent" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -119,8 +204,8 @@ export default function TaskListPage() {
                   </label>
                   <input
                     type="text"
-                    value={editingTask.name}
-                    onChange={(e) => setEditingTask({ ...editingTask, name: e.target.value })}
+                    value={editingTask.title}
+                    onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
                   />
                 </div>
@@ -131,18 +216,16 @@ export default function TaskListPage() {
                     Task Type
                   </label>
                   <select
-                    value={editingTask.taskType}
-                    onChange={(e) => setEditingTask({ ...editingTask, taskType: e.target.value })}
+                    value={editingTask.task_type_id || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, task_type_id: parseInt(e.target.value) })}
                     className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
                   >
-                    <option value="Assignment">Assignment</option>
-                    <option value="PPT/Presentation">PPT/Presentation</option>
-                    <option value="Report">Report</option>
-                    <option value="Practicum/Lab">Practicum/Lab</option>
-                    <option value="Exam/Test">Exam/Test</option>
-                    <option value="Project">Project</option>
-                    <option value="Reminder">Reminder</option>
-                    <option value="Other">Other</option>
+                    <option value="">Select task type</option>
+                    {taskTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -153,8 +236,8 @@ export default function TaskListPage() {
                   </label>
                   <input
                     type="date"
-                    value={editingTask.deadline}
-                    onChange={(e) => setEditingTask({ ...editingTask, deadline: e.target.value })}
+                    value={editingTask.due_date}
+                    onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
                   />
                 </div>
@@ -208,7 +291,7 @@ export default function TaskListPage() {
                 
                 <h2 className="text-2xl font-bold text-foreground mb-2">Task Completed!</h2>
                 <p className="text-muted-foreground mb-1">Great job finishing:</p>
-                <p className="font-semibold text-foreground text-lg mb-6">{finishingTask.name}</p>
+                <p className="font-semibold text-foreground text-lg mb-6">{finishingTask.title}</p>
                 
                 {/* Action Buttons */}
                 <div className="flex gap-3">

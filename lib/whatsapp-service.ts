@@ -26,28 +26,31 @@ if (accountSid && authToken) {
  * Message Templates
  */
 const MESSAGE_TEMPLATES = {
-  POMODORO_END: (taskName: string) => 
-    `⏰ Your Pomodoro focus session for "${taskName}" is finished. Time for a break! 🎉`,
+  TASK_LIST: (tasks: Array<{title: string, priority_score: number, due_date: string, taskType: string}>) => {
+    if (tasks.length === 0) {
+      return `📋 *Your Task List*\n\nNo tasks found. Add tasks to get started! 🎯`;
+    }
+    
+    let message = `📋 *Your Task List* (${tasks.length} tasks)\n\n`;
+    tasks.forEach((task, index) => {
+      const priority = task.priority_score >= 8 ? '🔴' : task.priority_score >= 5 ? '🟡' : '🟢';
+      const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No deadline';
+      message += `${index + 1}. ${priority} *${task.title}*\n`;
+      message += `   Type: ${task.taskType} | Due: ${dueDate}\n`;
+      message += `   Priority: ${task.priority_score.toFixed(1)}/10\n\n`;
+    });
+    message += `💪 Stay focused and complete your tasks!`;
+    return message;
+  },
   
-  SHORT_BREAK_END: (taskName: string) => 
-    `✅ Break is over! Ready to start the next focus session for "${taskName}"? 💪`,
-  
-  LONG_BREAK_END: (taskName: string) => 
-    `✅ Long break complete! Great work! Ready to continue with "${taskName}"? 🚀`,
-  
-  SESSION_STARTED: (taskName: string, duration: number) => 
-    `🎯 Pomodoro started for "${taskName}" - ${duration} minutes of focused work ahead!`,
-  
-  DAILY_SUMMARY: (completedSessions: number, totalMinutes: number) => 
-    `📊 Today's Progress:\n✅ ${completedSessions} Pomodoro sessions\n⏱️ ${totalMinutes} minutes of focused work\nKeep it up! 🌟`,
+  DAILY_SUMMARY: (completedTasks: number, pendingTasks: number) => 
+    `📊 *Daily Summary*\n\n✅ Completed: ${completedTasks} tasks\n⏳ Pending: ${pendingTasks} tasks\n\nKeep up the great work! 🌟`,
   
   WELCOME: () => 
-    `👋 Welcome to TaskRanker Pomodoro!\n\nCommands:\n• START - Begin Pomodoro\n• STOP - Cancel session\n• STATUS - View today's progress`,
+    `👋 Welcome to TaskRanker!\n\n*Commands:*\n• LIST - View all your tasks\n• TODAY - Today's tasks\n• PRIORITY - High priority tasks\n• HELP - Show commands`,
   
-  STATUS_REPLY: (completedToday: number, activeTask: string | null) => 
-    activeTask 
-      ? `📈 Status:\n✅ ${completedToday} sessions completed today\n🎯 Currently: ${activeTask}`
-      : `📈 Status:\n✅ ${completedToday} sessions completed today\n💤 No active session`,
+  STATUS_REPLY: (totalTasks: number, highPriority: number, dueToday: number) => 
+    `📈 *Quick Status*\n\n📋 Total tasks: ${totalTasks}\n🔴 High priority: ${highPriority}\n⏰ Due today: ${dueToday}\n\nReply LIST to see all tasks.`,
   
   SESSION_CANCELLED: () => 
     `🛑 Pomodoro session cancelled. Take a break or start a new one anytime!`,
@@ -184,65 +187,45 @@ async function logWhatsAppMessage(params: {
 }
 
 /**
- * Send Pomodoro completion notification
+ * Send task list via WhatsApp
  */
-export async function sendPomodoroEndNotification(
+export async function sendTaskList(
   userId: number,
   phoneNumber: string,
-  taskName: string,
-  sessionId: number
+  filterType: 'all' | 'today' | 'priority' = 'all'
 ) {
-  const message = MESSAGE_TEMPLATES.POMODORO_END(taskName);
-  return sendWhatsAppMessage({
-    userId,
-    phoneNumber,
-    message,
-    pomodoroSessionId: sessionId,
-    messageType: 'pomodoro_end',
-  });
-}
-
-/**
- * Send break completion notification
- */
-export async function sendBreakEndNotification(
-  userId: number,
-  phoneNumber: string,
-  taskName: string,
-  sessionId: number,
-  isLongBreak: boolean = false
-) {
-  const message = isLongBreak
-    ? MESSAGE_TEMPLATES.LONG_BREAK_END(taskName)
-    : MESSAGE_TEMPLATES.SHORT_BREAK_END(taskName);
-  
-  return sendWhatsAppMessage({
-    userId,
-    phoneNumber,
-    message,
-    pomodoroSessionId: sessionId,
-    messageType: isLongBreak ? 'long_break_end' : 'short_break_end',
-  });
-}
-
-/**
- * Send session started notification
- */
-export async function sendSessionStartedNotification(
-  userId: number,
-  phoneNumber: string,
-  taskName: string,
-  duration: number,
-  sessionId: number
-) {
-  const message = MESSAGE_TEMPLATES.SESSION_STARTED(taskName, duration);
-  return sendWhatsAppMessage({
-    userId,
-    phoneNumber,
-    message,
-    pomodoroSessionId: sessionId,
-    messageType: 'session_started',
-  });
+  try {
+    let query = `
+      SELECT t.id, t.title, t.priority_score, t.due_date, tt.name as taskType
+      FROM tasks t
+      LEFT JOIN task_types tt ON t.task_type_id = tt.id
+      WHERE t.user_id = ? AND (t.status IS NULL OR t.status != 'completed')
+    `;
+    
+    const params: any[] = [userId];
+    
+    if (filterType === 'today') {
+      query += ` AND DATE(t.due_date) = CURDATE()`;
+    } else if (filterType === 'priority') {
+      query += ` AND t.priority_score >= 70`; // High priority threshold (ML score 0-100)
+    }
+    
+    query += ` ORDER BY t.priority_score DESC, t.due_date ASC LIMIT 10`;
+    
+    const [tasks] = await pool.query(query, params) as any;
+    
+    const message = MESSAGE_TEMPLATES.TASK_LIST(tasks);
+    
+    return sendWhatsAppMessage({
+      userId,
+      phoneNumber,
+      message,
+      messageType: `task_list_${filterType}`,
+    });
+  } catch (error) {
+    console.error('Error sending task list:', error);
+    return { success: false, error: 'Failed to fetch tasks' };
+  }
 }
 
 /**
@@ -250,17 +233,79 @@ export async function sendSessionStartedNotification(
  */
 export async function sendDailySummary(
   userId: number,
-  phoneNumber: string,
-  completedSessions: number,
-  totalMinutes: number
+  phoneNumber: string
 ) {
-  const message = MESSAGE_TEMPLATES.DAILY_SUMMARY(completedSessions, totalMinutes);
-  return sendWhatsAppMessage({
-    userId,
-    phoneNumber,
-    message,
-    messageType: 'daily_summary',
-  });
+  try {
+    const [completedResult] = await pool.query(
+      `SELECT COUNT(*) as count FROM tasks 
+       WHERE user_id = ? AND status = 'completed' AND DATE(updated_at) = CURDATE()`,
+      [userId]
+    ) as any;
+    
+    const [pendingResult] = await pool.query(
+      `SELECT COUNT(*) as count FROM tasks 
+       WHERE user_id = ? AND status != 'completed'`,
+      [userId]
+    ) as any;
+    
+    const completed = completedResult[0]?.count || 0;
+    const pending = pendingResult[0]?.count || 0;
+    
+    const message = MESSAGE_TEMPLATES.DAILY_SUMMARY(completed, pending);
+    
+    return sendWhatsAppMessage({
+      userId,
+      phoneNumber,
+      message,
+      messageType: 'daily_summary',
+    });
+  } catch (error) {
+    console.error('Error sending daily summary:', error);
+    return { success: false, error: 'Failed to fetch summary' };
+  }
+}
+
+/**
+ * Send quick status
+ */
+export async function sendQuickStatus(
+  userId: number,
+  phoneNumber: string
+) {
+  try {
+    const [totalResult] = await pool.query(
+      `SELECT COUNT(*) as count FROM tasks WHERE user_id = ? AND status != 'completed'`,
+      [userId]
+    ) as any;
+    
+    const [highPriorityResult] = await pool.query(
+      `SELECT COUNT(*) as count FROM tasks 
+       WHERE user_id = ? AND status != 'completed' AND priority_score >= 7`,
+      [userId]
+    ) as any;
+    
+    const [dueTodayResult] = await pool.query(
+      `SELECT COUNT(*) as count FROM tasks 
+       WHERE user_id = ? AND status != 'completed' AND DATE(due_date) = CURDATE()`,
+      [userId]
+    ) as any;
+    
+    const total = totalResult[0]?.count || 0;
+    const highPriority = highPriorityResult[0]?.count || 0;
+    const dueToday = dueTodayResult[0]?.count || 0;
+    
+    const message = MESSAGE_TEMPLATES.STATUS_REPLY(total, highPriority, dueToday);
+    
+    return sendWhatsAppMessage({
+      userId,
+      phoneNumber,
+      message,
+      messageType: 'status',
+    });
+  } catch (error) {
+    console.error('Error sending status:', error);
+    return { success: false, error: 'Failed to fetch status' };
+  }
 }
 
 /**

@@ -101,8 +101,7 @@ CREATE TABLE notification_jobs (
 CREATE INDEX idx_scheduled_jobs ON notification_jobs(scheduled_at, status);
 CREATE INDEX idx_user_jobs ON notification_jobs(user_id, scheduled_at DESC);
 CREATE INDEX idx_session_jobs ON notification_jobs(pomodoro_session_id);
-CREATE INDEX idx_pending_jobs ON notification_jobs(status, scheduled_at) 
-    WHERE status = 'pending';
+CREATE INDEX idx_pending_jobs ON notification_jobs(status, scheduled_at);
 
 -- =====================================================
 -- Pomodoro Settings Table (User preferences)

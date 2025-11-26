@@ -3,7 +3,7 @@
  * POST /api/whatsapp/webhook
  * 
  * Handles incoming WhatsApp messages from Twilio
- * Supports commands: START, STOP, STATUS
+ * Supports commands: LIST, TODAY, PRIORITY, STATUS, HELP
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,14 +11,11 @@ import {
   handleIncomingMessage, 
   verifyWebhookSignature,
   sendWhatsAppMessage,
+  sendTaskList,
+  sendQuickStatus,
+  sendDailySummary,
   MESSAGE_TEMPLATES,
 } from '@/lib/whatsapp-service';
-import { 
-  getActiveSession, 
-  getTodaySessionCount,
-  startPomodoroSession,
-  cancelNotification,
-} from '@/lib/pomodoro-scheduler';
 import pool from '@/lib/db';
 
 export async function POST(request: NextRequest) {
@@ -61,16 +58,29 @@ export async function POST(request: NextRequest) {
     let responseMessage = '';
 
     switch (command) {
-      case 'START':
-        responseMessage = await handleStartCommand(userId);
+      case 'LIST':
+        await handleListCommand(userId, from.replace('whatsapp:', ''));
+        responseMessage = ''; // Response already sent
         break;
 
-      case 'STOP':
-        responseMessage = await handleStopCommand(userId);
+      case 'TODAY':
+        await handleTodayCommand(userId, from.replace('whatsapp:', ''));
+        responseMessage = '';
+        break;
+
+      case 'PRIORITY':
+        await handlePriorityCommand(userId, from.replace('whatsapp:', ''));
+        responseMessage = '';
         break;
 
       case 'STATUS':
-        responseMessage = await handleStatusCommand(userId);
+        await handleStatusCommand(userId, from.replace('whatsapp:', ''));
+        responseMessage = '';
+        break;
+
+      case 'SUMMARY':
+        await handleSummaryCommand(userId, from.replace('whatsapp:', ''));
+        responseMessage = '';
         break;
 
       case 'HELP':
@@ -103,126 +113,38 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Handle START command - start Pomodoro for highest priority task
+ * Handle LIST command - send all tasks
  */
-async function handleStartCommand(userId: number): Promise<string> {
-  try {
-    // Check if user already has active session
-    const activeSession = await getActiveSession(userId);
-    
-    if (activeSession) {
-      const timeLeft = Math.floor(
-        (new Date(activeSession.end_time).getTime() - Date.now()) / 60000
-      );
-      return `⏳ You already have an active ${activeSession.mode} session for "${activeSession.task_name}"\n\n⏱️ Time remaining: ${timeLeft} minutes`;
-    }
-
-    // Get highest priority task
-    const [tasks] = await pool.query<any[]>(
-      `SELECT id, name, priority 
-       FROM tasks 
-       WHERE user_id = ? 
-       ORDER BY priority DESC 
-       LIMIT 1`,
-      [userId]
-    );
-
-    if (tasks.length === 0) {
-      return MESSAGE_TEMPLATES.TASK_NOT_FOUND();
-    }
-
-    const task = tasks[0];
-
-    // Get user's Pomodoro settings
-    const [settings] = await pool.query<any[]>(
-      `SELECT focus_duration FROM pomodoro_settings WHERE user_id = ?`,
-      [userId]
-    );
-
-    const duration = settings[0]?.focus_duration || 25;
-
-    // Start Pomodoro session
-    const sessionId = await startPomodoroSession({
-      userId,
-      taskId: task.id,
-      duration,
-      mode: 'focus',
-      sessionNumber: 1,
-    });
-
-    return `🎯 Pomodoro started!\n\nTask: "${task.name}"\nDuration: ${duration} minutes\n\nStay focused! You'll get a notification when it's done. 💪`;
-
-  } catch (error) {
-    console.error('Error handling START command:', error);
-    return '❌ Sorry, I couldn\'t start a Pomodoro session. Please try again later.';
-  }
+async function handleListCommand(userId: number, phoneNumber: string): Promise<void> {
+  await sendTaskList(userId, phoneNumber, 'all');
 }
 
 /**
- * Handle STOP command - cancel active session
+ * Handle TODAY command - send today's tasks
  */
-async function handleStopCommand(userId: number): Promise<string> {
-  try {
-    // Get active session
-    const activeSession = await getActiveSession(userId);
-    
-    if (!activeSession) {
-      return MESSAGE_TEMPLATES.NO_ACTIVE_SESSION();
-    }
-
-    // Cancel the session
-    await pool.query(
-      `UPDATE pomodoro_sessions 
-       SET status = 'cancelled', interrupted = TRUE, actual_end_time = NOW()
-       WHERE id = ?`,
-      [activeSession.id]
-    );
-
-    // Cancel notifications
-    await cancelNotification(activeSession.id);
-
-    return `🛑 Pomodoro session for "${activeSession.task_name}" has been cancelled.\n\nTake a break or start a new session anytime!`;
-
-  } catch (error) {
-    console.error('Error handling STOP command:', error);
-    return '❌ Sorry, I couldn\'t stop the session. Please try again.';
-  }
+async function handleTodayCommand(userId: number, phoneNumber: string): Promise<void> {
+  await sendTaskList(userId, phoneNumber, 'today');
 }
 
 /**
- * Handle STATUS command - show today's progress
+ * Handle PRIORITY command - send high priority tasks
  */
-async function handleStatusCommand(userId: number): Promise<string> {
-  try {
-    // Get active session
-    const activeSession = await getActiveSession(userId);
-    
-    // Get today's stats
-    const stats = await getTodaySessionCount(userId);
+async function handlePriorityCommand(userId: number, phoneNumber: string): Promise<void> {
+  await sendTaskList(userId, phoneNumber, 'priority');
+}
 
-    const completedToday = stats.completed_focus || 0;
-    const totalMinutes = stats.total_focus_minutes || 0;
+/**
+ * Handle STATUS command - show quick status
+ */
+async function handleStatusCommand(userId: number, phoneNumber: string): Promise<void> {
+  await sendQuickStatus(userId, phoneNumber);
+}
 
-    let statusMessage = `📊 Your Pomodoro Status\n\n`;
-    statusMessage += `✅ Completed today: ${completedToday} sessions\n`;
-    statusMessage += `⏱️ Total focus time: ${totalMinutes} minutes\n\n`;
-
-    if (activeSession) {
-      const timeLeft = Math.floor(
-        (new Date(activeSession.end_time).getTime() - Date.now()) / 60000
-      );
-      statusMessage += `🎯 Active: "${activeSession.task_name}"\n`;
-      statusMessage += `⏳ Time left: ${timeLeft} minutes`;
-    } else {
-      statusMessage += `💤 No active session\n\nReply START to begin!`;
-    }
-
-    return statusMessage;
-
-  } catch (error) {
-    console.error('Error handling STATUS command:', error);
-    return '❌ Sorry, I couldn\'t retrieve your status. Please try again.';
-  }
+/**
+ * Handle SUMMARY command - send daily summary
+ */
+async function handleSummaryCommand(userId: number, phoneNumber: string): Promise<void> {
+  await sendDailySummary(userId, phoneNumber);
 }
 
 // Handle GET for webhook verification (Twilio requirement)

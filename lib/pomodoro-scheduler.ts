@@ -7,10 +7,6 @@
 
 import cron from 'node-cron';
 import pool from './db';
-import {
-  sendPomodoroEndNotification,
-  sendBreakEndNotification,
-} from './whatsapp-service';
 
 /**
  * Job registry to track scheduled cron jobs
@@ -81,26 +77,9 @@ async function executeJob(job: any) {
       [jobId]
     );
 
-    // Send WhatsApp notification based on job type
-    let result;
-    
-    if (job.job_type === 'pomodoro_end') {
-      result = await sendPomodoroEndNotification(
-        job.user_id,
-        job.phone_number,
-        job.task_name,
-        job.pomodoro_session_id
-      );
-    } else if (job.job_type === 'break_end') {
-      const isLongBreak = job.mode === 'long_break';
-      result = await sendBreakEndNotification(
-        job.user_id,
-        job.phone_number,
-        job.task_name,
-        job.pomodoro_session_id,
-        isLongBreak
-      );
-    }
+    // WhatsApp notifications disabled (now using task list reminders instead)
+    // Mark job as completed
+    const result = { success: true, messageSid: null };
 
     if (result?.success) {
       // Mark job as completed
@@ -123,8 +102,6 @@ async function executeJob(job: any) {
       await handleSessionTransition(job);
 
       console.log(`✅ Job ${jobId} completed successfully`);
-    } else {
-      throw new Error(result?.error || 'Unknown error sending WhatsApp');
     }
 
   } catch (error: any) {
@@ -284,9 +261,10 @@ export async function cancelNotification(pomodoroSessionId: number) {
 export async function getActiveSession(userId: number) {
   try {
     const [sessions] = await pool.query<any[]>(
-      `SELECT ps.*, t.name as task_name, t.taskType as task_type
+      `SELECT ps.*, t.title as task_name, tt.name as task_type
        FROM pomodoro_sessions ps
-       JOIN tasks t ON ps.task_id = t.id
+       LEFT JOIN tasks t ON ps.task_id = t.id
+       LEFT JOIN task_types tt ON t.task_type_id = tt.id
        WHERE ps.user_id = ?
          AND ps.status IN ('active', 'paused', 'scheduled')
        ORDER BY ps.start_time DESC
