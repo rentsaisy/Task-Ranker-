@@ -7,7 +7,7 @@ import Header from "@/components/header"
 import Dashboard from "@/components/dashboard"
 import InputTaskPage from "@/components/pages/input-task-type"
 import TaskListPage from "@/components/pages/task-list"
-import MLResultsPage from "@/components/pages/ml-results"
+import MLResultsPage from "@/components/pages/focus-mode"
 import SettingsPage from "@/components/pages/settings"
 import AboutPage from "@/components/pages/about"
 

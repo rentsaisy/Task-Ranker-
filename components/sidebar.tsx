@@ -14,7 +14,7 @@ const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "tasks", label: "Task List", icon: List },
   { id: "input", label: "Input Task Type", icon: Plus },
-  { id: "results", label: "ML Priority Results", icon: Brain },
+  { id: "results", label: "Focus Mode", icon: Brain },
   { id: "settings", label: "Settings", icon: Settings },
   { id: "about", label: "About", icon: Info },
 ]
