@@ -11,8 +11,8 @@ interface HeaderProps {
 }
 
 const pageConfig: Record<string, { label: string; icon: any; description: string }> = {
-  dashboard: { label: "Dashboard", icon: LayoutDashboard, description: "Overview of your task prioritization at a glance" },
-  input: { label: "Input Task", icon: Plus, description: "Add new tasks to your list" },
+dashboard: { label: "Dashboard", icon: LayoutDashboard, description: "Overview of your task prioritization at a glance" },
+  input: { label: "Input Task Type", icon: Plus, description: "Add new types of tasks" },
   tasks: { label: "Task List", icon: List, description: "View and manage all your tasks" },
   results: { label: "ML Priority Results", icon: Brain, description: "Machine Learning analysis of your task priorities" },
   settings: { label: "Settings", icon: Settings, description: "Customize your preferences" },
