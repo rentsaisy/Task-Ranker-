@@ -39,7 +39,7 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
         {/* Toggle button on border */}
         <button
           onClick={onToggle}
-          className="hidden md:flex absolute -right-4 top-6 w-8 h-8 bg-card border border-border rounded-full items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 z-50"
+          className="hidden md:flex absolute -right-4 top-20 w-8 h-8 bg-card border border-border rounded-full items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 z-50"
         >
           {open ? (
             <ChevronLeft className="w-4 h-4 text-foreground" />
@@ -48,7 +48,7 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
           )}
         </button>
         {/* Logo section */}
-        <div className="p-6 border-b border-border flex items-center gap-3 smooth-transition">
+        <div className="p-6 flex items-center gap-1 smooth-transition mt-1">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-gradient-to-br from-primary via-accent to-ml-accent rounded-lg flex items-center justify-center shadow-lg smooth-transition hover:scale-110 flex-shrink-0">
               <Sparkles className="w-6 h-6 text-white" />

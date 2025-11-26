@@ -64,8 +64,8 @@ export default function Header({ sidebarOpen, onToggleSidebar, currentPage }: He
   const PageIcon = currentPageConfig.icon
 
   return (
-    <header className="bg-card border-b border-border sticky top-0 z-40 shadow-sm">
-      <div className="flex items-center justify-between px-6 py-4">
+    <header className="bg-card sticky top-0 z-30 shadow-sm">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         {/* Left side - Menu toggle */}
         <button
           onClick={() => onToggleSidebar(!sidebarOpen)}
