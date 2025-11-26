@@ -2,6 +2,17 @@
 
 import { LayoutDashboard, Plus, List, Brain, Settings, Info, Sparkles, Zap, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface SidebarProps {
   open: boolean
@@ -21,6 +32,7 @@ const menuItems = [
 
 export default function Sidebar({ open, currentPage, onNavigate, onToggle }: SidebarProps) {
   const router = useRouter()
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   
   function handleLogout() {
     localStorage.removeItem("user")
@@ -92,7 +104,7 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
         <div className="p-4 border-t border-border">
           {/* Logout Button */}
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutDialog(true)}
             className={`w-full flex items-center ${open ? 'gap-3 px-4' : 'justify-center px-3'} py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:shadow-sm transition-all duration-200 smooth-transition`}
             title={!open ? "Logout" : undefined}
           >
@@ -101,6 +113,27 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
           </button>
         </div>
       </aside>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be redirected to the login page and will need to sign in again to access your tasks.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

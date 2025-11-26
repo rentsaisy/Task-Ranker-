@@ -33,16 +33,29 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
   const fetchTaskTypes = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/task-types?userId=1')
-      const data = await response.json()
-      setTaskTypes(data)
+      const response = await fetch('/api/task-types')
       
-      // Set first task type as default
-      if (data.length > 0) {
-        setFormData(prev => ({ ...prev, task_type_id: data[0].id.toString() }))
+      if (!response.ok) {
+        throw new Error('Failed to fetch task types')
+      }
+      
+      const data = await response.json()
+      
+      // Ensure data is an array
+      if (Array.isArray(data)) {
+        setTaskTypes(data)
+        
+        // Set first task type as default
+        if (data.length > 0) {
+          setFormData(prev => ({ ...prev, task_type_id: data[0].id.toString() }))
+        }
+      } else {
+        console.error('Invalid data format:', data)
+        setTaskTypes([])
       }
     } catch (error) {
       console.error('Error fetching task types:', error)
+      setTaskTypes([])
     } finally {
       setLoading(false)
     }
