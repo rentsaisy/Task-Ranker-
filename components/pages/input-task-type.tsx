@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Brain, CheckCircle, Trash2, Edit } from "lucide-react"
+import { Plus, Brain, CheckCircle, Trash2, Edit, AlertTriangle } from "lucide-react"
 import { useState } from "react"
 
 interface TaskType {
@@ -30,6 +30,8 @@ export default function InputTaskTypePage() {
 
   const [editingId, setEditingId] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingTaskType, setDeletingTaskType] = useState<TaskType | null>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,10 +73,22 @@ export default function InputTaskTypePage() {
     setEditingId(taskType.id)
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this task type?")) {
-      setTaskTypes(taskTypes.filter(tt => tt.id !== id))
+  const handleDelete = (taskType: TaskType) => {
+    setDeletingTaskType(taskType)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = () => {
+    if (deletingTaskType) {
+      setTaskTypes(taskTypes.filter(tt => tt.id !== deletingTaskType.id))
+      setShowDeleteModal(false)
+      setDeletingTaskType(null)
     }
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false)
+    setDeletingTaskType(null)
   }
 
   const handleCancelEdit = () => {
@@ -262,7 +276,7 @@ export default function InputTaskTypePage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(taskType.id)}
+                          onClick={() => handleDelete(taskType)}
                           className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
                           title="Delete"
                         >
@@ -276,6 +290,45 @@ export default function InputTaskTypePage() {
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && deletingTaskType && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card rounded-xl border border-border p-8 max-w-md w-full shadow-2xl relative overflow-hidden animate-scale-in">
+              {/* Warning Background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-orange-50 to-red-50 dark:from-red-950/20 dark:via-orange-950/20 dark:to-red-950/20" />
+              
+              {/* Content */}
+              <div className="relative z-10 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-full mb-4 animate-pulse">
+                  <AlertTriangle className="w-8 h-8 text-white" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-foreground mb-2">Delete Task Type?</h2>
+                <p className="text-muted-foreground mb-1">Are you sure you want to delete:</p>
+                <p className="font-semibold text-foreground text-lg mb-2">{deletingTaskType.name}</p>
+                <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
+                
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={cancelDelete}
+                    className="flex-1 bg-secondary hover:bg-secondary/80 text-foreground font-semibold py-3 px-4 rounded-lg transition-all duration-200 smooth-transition active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:shadow-lg text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 smooth-transition hover:brightness-110 active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
