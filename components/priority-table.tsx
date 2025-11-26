@@ -6,8 +6,7 @@ interface Task {
   id: number
   name: string
   deadline: string
-  difficulty: number
-  weight: number
+  taskType: string
   priority: number
 }
 
@@ -36,9 +35,8 @@ export default function PriorityTable({ tasks }: PriorityTableProps) {
         <thead>
           <tr className="border-b border-border">
             <th className="text-left py-3 px-4 font-semibold text-foreground">Task Name</th>
+            <th className="text-left py-3 px-4 font-semibold text-foreground">Task Type</th>
             <th className="text-left py-3 px-4 font-semibold text-foreground">Deadline</th>
-            <th className="text-center py-3 px-4 font-semibold text-foreground">Difficulty</th>
-            <th className="text-center py-3 px-4 font-semibold text-foreground">Weight</th>
             <th className="text-center py-3 px-4 font-semibold text-foreground">Priority</th>
           </tr>
         </thead>
@@ -53,15 +51,8 @@ export default function PriorityTable({ tasks }: PriorityTableProps) {
                   </div>
                 </div>
               </td>
+              <td className="py-3 px-4 text-muted-foreground">{task.taskType}</td>
               <td className="py-3 px-4 text-muted-foreground">{new Date(task.deadline).toLocaleDateString()}</td>
-              <td className="py-3 px-4 text-center">
-                <div className="flex justify-center gap-1">
-                  {Array.from({ length: task.difficulty }).map((_, i) => (
-                    <div key={i} className="w-1.5 h-5 bg-accent rounded-sm" />
-                  ))}
-                </div>
-              </td>
-              <td className="py-3 px-4 text-center font-semibold text-foreground">{task.weight}</td>
               <td className="py-3 px-4 text-center">
                 <div className="flex items-center justify-center gap-2">
                   <span

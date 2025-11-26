@@ -14,24 +14,21 @@ export default function Dashboard() {
       id: 1,
       name: "Advanced Calculus Assignment",
       deadline: "2024-12-20",
-      difficulty: 4,
-      weight: 8,
+      taskType: "Assignment",
       priority: 92,
     },
     {
       id: 2,
       name: "Physics Lab Report",
       deadline: "2024-12-18",
-      difficulty: 3,
-      weight: 6,
+      taskType: "Report",
       priority: 78,
     },
     {
       id: 3,
       name: "Literature Essay",
       deadline: "2024-12-22",
-      difficulty: 2,
-      weight: 5,
+      taskType: "Assignment",
       priority: 58,
     },
   ])
@@ -77,27 +74,16 @@ export default function Dashboard() {
           {/* Left Column - Form */}
           <div className="lg:col-span-1">
             <TaskForm onAddTask={handleAddTask} />
-          </div>
+          </div>  
 
           {/* Right Column */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Priority Chart */}
-            <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Priority Distribution</h2>
-                  <p className="text-sm text-muted-foreground">ML-Ranked Tasks</p>
-                </div>
-              </div>
-              <PriorityChart tasks={tasks} />
-            </div>
-
             {/* Priority Table */}
             <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-lg font-bold text-foreground">Task Priorities</h2>
-                  <p className="text-sm text-muted-foreground">Sorted by ML Priority Score</p>
+                  <h2 className="text-lg font-bold text-foreground">Ranking</h2>
+                  <p className="text-sm text-muted-foreground">Finish it before it finish u</p>
                 </div>
               </div>
               <PriorityTable tasks={tasks} />

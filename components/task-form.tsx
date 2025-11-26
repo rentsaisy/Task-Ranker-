@@ -12,10 +12,20 @@ interface TaskFormProps {
 export default function TaskForm({ onAddTask }: TaskFormProps) {
   const [formData, setFormData] = useState({
     name: "",
+    taskType: "Assignment",
     deadline: "",
-    difficulty: 3,
-    weight: 5,
   })
+
+  const taskTypes = [
+    "Assignment",
+    "PPT/Presentation", 
+    "Report",
+    "Practicum/Lab",
+    "Exam/Test",
+    "Project",
+    "Reminder",
+    "Other"
+  ]
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,7 +34,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
       return
     }
     onAddTask(formData)
-    setFormData({ name: "", deadline: "", difficulty: 3, weight: 5 })
+    setFormData({ name: "", taskType: "Assignment", deadline: "" })
   }
 
   return (
@@ -45,6 +55,20 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
           />
         </div>
 
+        {/* Task Type */}
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-2">Task Type</label>
+          <select
+            value={formData.taskType}
+            onChange={(e) => setFormData({ ...formData, taskType: e.target.value })}
+            className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
+          >
+            {taskTypes.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Deadline */}
         <div>
           <label className="block text-sm font-semibold text-foreground mb-2">Deadline</label>
@@ -60,50 +84,6 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
           </div>
         </div>
 
-        {/* Difficulty */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-semibold text-foreground">Difficulty Level</label>
-            <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
-              {formData.difficulty}/5
-            </span>
-          </div>
-          <input
-            type="range"
-            min="1"
-            max="5"
-            value={formData.difficulty}
-            onChange={(e) => setFormData({ ...formData, difficulty: Number.parseInt(e.target.value) })}
-            className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>Easy</span>
-            <span>Hard</span>
-          </div>
-        </div>
-
-        {/* Weight */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-semibold text-foreground">Task Weight</label>
-            <span className="text-sm font-bold text-accent bg-accent/10 px-3 py-1 rounded-full">
-              {formData.weight}/10
-            </span>
-          </div>
-          <input
-            type="range"
-            min="1"
-            max="10"
-            value={formData.weight}
-            onChange={(e) => setFormData({ ...formData, weight: Number.parseInt(e.target.value) })}
-            className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>Low Impact</span>
-            <span>High Impact</span>
-          </div>
-        </div>
-
         {/* Submit Button */}
         <button
           type="submit"
@@ -114,19 +94,6 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
         </button>
       </form>
 
-      {/* ML Info Box */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-lg relative overflow-hidden">
-        <div className="absolute inset-0 neural-pattern opacity-20" />
-        <div className="relative z-10">
-          <p className="text-xs text-foreground font-semibold mb-1 flex items-center gap-1">
-            <Brain className="w-3 h-3" /> ML Optimization
-          </p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Our algorithm analyzes deadline urgency, task complexity, and importance to generate optimal priority
-            scores.
-          </p>
-        </div>
-      </div>
     </div>
   )
 }
