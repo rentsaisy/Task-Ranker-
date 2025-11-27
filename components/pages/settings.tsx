@@ -40,7 +40,12 @@ export default function SettingsPage() {
       
       // Get user from localStorage
       const userStr = localStorage.getItem("user")
-      const user = userStr ? JSON.parse(userStr) : null
+      let user = null
+      try {
+        user = userStr ? JSON.parse(userStr) : null
+      } catch {
+        // Ignore parse errors
+      }
       const userId = user?.id
       
       // If user is logged in, save Discord User ID to profile

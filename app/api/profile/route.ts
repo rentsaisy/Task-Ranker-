@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       }
       if (discordUserId !== undefined) {
         updates.push('discord_user_id = ?')
-        values.push(discordUserId || null)
+        values.push(discordUserId === '' ? null : discordUserId)
       }
       
       if (updates.length > 0) {

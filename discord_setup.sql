@@ -13,7 +13,7 @@ SET @preparedStatement = (SELECT IF(
    WHERE TABLE_SCHEMA = 'taskranker_db'
    AND TABLE_NAME = 'users'
    AND COLUMN_NAME = 'discord_user_id') = 0,
-  "ALTER TABLE users ADD COLUMN discord_user_id VARCHAR(20) NULL COMMENT 'Discord User ID for bot notifications';",
+  "ALTER TABLE users ADD COLUMN discord_user_id VARCHAR(25) NULL COMMENT 'Discord User ID for bot notifications';",
   "SELECT 'Column discord_user_id already exists' AS message;"
 ));
 PREPARE alterIfNotExists FROM @preparedStatement;
