@@ -1,6 +1,6 @@
 "use client"
 
-import { List, Calendar, CheckCircle, Edit, Sparkles, Trophy } from "lucide-react"
+import { List, Calendar, CheckCircle, Edit, Sparkles, Trophy, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useState, useEffect } from "react"
 
 interface Task {
@@ -14,6 +14,10 @@ interface Task {
 
 export default function TaskListPage() {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(5)
   const [taskTypes, setTaskTypes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -26,12 +30,41 @@ export default function TaskListPage() {
     fetchTaskTypes()
   }, [])
 
+  useEffect(() => {
+    // Filter tasks based on search query
+    if (searchQuery.trim() === "") {
+      setFilteredTasks(tasks)
+    } else {
+      const query = searchQuery.toLowerCase()
+      const filtered = tasks.filter(task => 
+        task.title.toLowerCase().includes(query) || 
+        (task.task_type_name && task.task_type_name.toLowerCase().includes(query))
+      )
+      setFilteredTasks(filtered)
+    }
+    // Reset to first page when search changes
+    setCurrentPage(1)
+  }, [searchQuery, tasks])
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage)
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem)
+
+  const goToFirstPage = () => setCurrentPage(1)
+  const goToLastPage = () => setCurrentPage(totalPages)
+  const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages))
+  const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1))
+  const goToPage = (page: number) => setCurrentPage(page)
+
   const fetchTasks = async () => {
     try {
       setLoading(true)
       const response = await fetch('/api/tasks?userId=1')
       const data = await response.json()
       setTasks(data)
+      setFilteredTasks(data)
     } catch (error) {
       console.error('Error fetching tasks:', error)
     } finally {
@@ -123,35 +156,49 @@ export default function TaskListPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="h-[88vh] overflow-hidden p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
+      <div className="max-w-6xl mx-auto h-full flex flex-col space-y-4">
+
+        {/* Search Bar */}
+        <div className="flex justify-end flex-shrink-0">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search task name or type..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-lg bg-input border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition text-sm"
+            />
+          </div>
+        </div>
 
         {/* Tasks Table */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+        <div className="bg-card rounded-xl border border-border shadow-sm flex-shrink-0">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
+              <thead className="bg-secondary/50">
                 <tr className="border-b border-border bg-secondary/50">
-                  <th className="text-left py-4 px-6 font-semibold text-foreground">Task Name</th>
-                  <th className="text-left py-4 px-6 font-semibold text-foreground">Task Type</th>
-                  <th className="text-left py-4 px-6 font-semibold text-foreground">Priority</th>
-                  <th className="text-left py-4 px-6 font-semibold text-foreground">Deadline</th>
-                  <th className="text-center py-4 px-6 font-semibold text-foreground">Actions</th>
+                  <th className="text-left py-6 px-7 font-semibold text-foreground">Task Name</th>
+                  <th className="text-left py-6 px-7 font-semibold text-foreground">Task Type</th>
+                  <th className="text-left py-6 px-7 font-semibold text-foreground">Priority</th>
+                  <th className="text-left py-6 px-7 font-semibold text-foreground">Deadline</th>
+                  <th className="text-center py-6 px-7 font-semibold text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {tasks.length === 0 ? (
+                {currentTasks.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                      No tasks found. Create your first task!
+                    <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                      {searchQuery ? `No tasks found matching "${searchQuery}"` : "No tasks found. Create your first task!"}
                     </td>
                   </tr>
                 ) : (
-                  tasks.map((task) => (
+                  currentTasks.map((task) => (
                     <tr key={task.id} className="border-b border-border hover:bg-secondary/50 smooth-transition">
-                      <td className="py-4 px-6 font-medium text-foreground">{task.title}</td>
-                      <td className="py-4 px-6 text-muted-foreground">{task.task_type_name || 'N/A'}</td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-5 font-medium text-foreground">{task.title}</td>
+                      <td className="py-3 px-5 text-muted-foreground">{task.task_type_name || 'N/A'}</td>
+                      <td className="py-3 px-5">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                           (task.priority_score || 0) >= 80 ? 'bg-red-500/20 text-red-400' :
                           (task.priority_score || 0) >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
@@ -160,25 +207,25 @@ export default function TaskListPage() {
                           {Math.round(task.priority_score || 0)}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-muted-foreground flex items-center gap-2">
+                      <td className="py-3 px-5 text-muted-foreground flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
                         {new Date(task.due_date).toLocaleDateString()}
                       </td>
-                      <td className="py-4 px-6 text-center">
+                      <td className="py-3 px-5 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button 
                             onClick={() => handleEdit(task)}
-                            className="p-2 hover:bg-primary/10 rounded-lg transition-colors smooth-transition"
+                            className="p-2 hover:bg-primary/30 rounded-lg transition-all smooth-transition group bg-blue-100 dark:bg-primary/10 border border-blue-300 dark:border-primary/20"
                             title="Edit task"
                           >
-                            <Edit className="w-4 h-4 text-primary" />
+                            <Edit className="w-4 h-4 text-blue-600 dark:text-primary group-hover:scale-110 transition-transform" />
                           </button>
                           <button 
                             onClick={() => handleFinish(task)}
-                            className="p-2 hover:bg-accent/10 rounded-lg transition-colors smooth-transition"
+                            className="p-2 hover:bg-green-100 dark:hover:bg-accent/20 rounded-lg transition-all smooth-transition group bg-green-50 dark:bg-accent/10 border border-green-300 dark:border-accent/20"
                             title="Mark as finished"
                           >
-                            <CheckCircle className="w-4 h-4 text-accent" />
+                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-accent group-hover:scale-110 transition-transform" />
                           </button>
                         </div>
                       </td>
@@ -189,6 +236,62 @@ export default function TaskListPage() {
             </table>
           </div>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredTasks.length > 0 && (
+          <div className="flex items-center justify-between bg-card rounded-xl border border-border p-3 shadow-sm flex-shrink-0">
+            <div className="text-sm text-muted-foreground">
+              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredTasks.length)} of {filteredTasks.length} tasks
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* First Page */}
+              <button
+                onClick={goToFirstPage}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title="First page"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+
+              {/* Previous Page */}
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title="Previous page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Current Page Display */}
+              <div className="px-4 py-1 rounded-lg bg-secondary text-foreground text-sm font-medium">
+                {currentPage}
+              </div>
+
+              {/* Next Page */}
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title="Next page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title="Last page"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Edit Modal */}
         {showEditModal && editingTask && (
