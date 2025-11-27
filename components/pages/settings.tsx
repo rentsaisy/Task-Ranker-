@@ -1,22 +1,89 @@
 "use client"
 
-import { Settings, Bell, Moon, Sun, Clock } from "lucide-react"
+import { Bell, Moon, Sun, Clock, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle")
   const [settings, setSettings] = useState({
     notifications: true,
     reminderTime: "1hour",
+    discordUserId: "",
   })
 
   useEffect(() => {
     setMounted(true)
+    
+    // Load saved settings from localStorage
+    const savedSettings = localStorage.getItem("taskRankerSettings")
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings)
+        setSettings(prev => ({ ...prev, ...parsed }))
+      } catch {
+        // Ignore parse errors
+      }
+    }
   }, [])
 
-  if (!mounted) return null
+  const handleSaveSettings = async () => {
+    setSaving(true)
+    setSaveStatus("idle")
+    
+    try {
+      // Save to localStorage
+      localStorage.setItem("taskRankerSettings", JSON.stringify(settings))
+      
+      // Get user from localStorage
+      const userStr = localStorage.getItem("user")
+      const user = userStr ? JSON.parse(userStr) : null
+      const userId = user?.id
+      
+      // If user is logged in, save Discord User ID to profile
+      if (userId && settings.discordUserId) {
+        const response = await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            discordUserId: settings.discordUserId,
+          }),
+        })
+        
+        if (!response.ok) {
+          throw new Error("Failed to save Discord User ID")
+        }
+      }
+      
+      setSaveStatus("success")
+      setTimeout(() => setSaveStatus("idle"), 3000)
+    } catch {
+      setSaveStatus("error")
+      setTimeout(() => setSaveStatus("idle"), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background">
+        <div className="max-w-2xl mx-auto space-y-8">
+          <div className="space-y-6">
+            {/* Skeleton loading state */}
+            <div className="bg-card rounded-xl border border-border p-6 animate-pulse">
+              <div className="h-6 bg-muted rounded w-1/3" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
@@ -65,6 +132,33 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Discord Integration */}
+          <div className="bg-card rounded-xl border border-border p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <MessageCircle className="w-5 h-5 text-primary" />
+              <div>
+                <h3 className="font-semibold text-foreground">Discord Notifications</h3>
+                <p className="text-xs text-muted-foreground">Connect to receive task reminders via Discord</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label htmlFor="discordUserId" className="text-sm text-muted-foreground">
+                Discord User ID
+              </label>
+              <input
+                id="discordUserId"
+                type="text"
+                value={settings.discordUserId}
+                onChange={(e) => setSettings({ ...settings, discordUserId: e.target.value })}
+                placeholder="Enter your Discord User ID (e.g., 123456789012345678)"
+                className="w-full px-4 py-2 rounded-lg bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <p className="text-xs text-muted-foreground">
+                To find your Discord User ID: Enable Developer Mode in Discord Settings → User Settings → Advanced, then right-click your username and select &quot;Copy User ID&quot;.
+              </p>
+            </div>
+          </div>
+
           {/* Notifications */}
           <div className="bg-card rounded-xl border border-border p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -101,8 +195,26 @@ export default function SettingsPage() {
           </div>
 
           {/* Save Button */}
-          <button className="w-full bg-gradient-to-r from-primary to-accent text-foreground font-semibold py-3 rounded-lg hover:shadow-lg smooth-transition active:scale-95 transition-all">
-            Save Settings
+          <button 
+            onClick={handleSaveSettings}
+            disabled={saving}
+            className="w-full bg-gradient-to-r from-primary to-accent text-foreground font-semibold py-3 rounded-lg hover:shadow-lg smooth-transition active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              "Saving..."
+            ) : saveStatus === "success" ? (
+              <>
+                <CheckCircle2 className="w-5 h-5" />
+                Settings Saved!
+              </>
+            ) : saveStatus === "error" ? (
+              <>
+                <AlertCircle className="w-5 h-5" />
+                Failed to Save
+              </>
+            ) : (
+              "Save Settings"
+            )}
           </button>
         </div>
       </div>
