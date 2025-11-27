@@ -1,68 +1,70 @@
-# 🍅 Focus Mode with Pomodoro Timer & WhatsApp Bot
+# 🍅 Focus Mode with Pomodoro Timer
 
-> A complete Pomodoro timer implementation with server-side scheduling and WhatsApp bot integration for TaskRanker ML Web.
+> A complete Pomodoro timer implementation with server-side scheduling for TaskRanker ML Web.
 
----
-
-## 📖 Table of Contents
+## 📑 Table of Contents
 
 - [Overview](#-overview)
 - [Features](#-features)
+- [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
 - [Documentation](#-documentation)
-- [Architecture](#-architecture)
+- [Project Structure](#-project-structure)
 - [Installation](#-installation)
 - [Usage](#-usage)
-- [API Reference](#-api-reference)
-- [WhatsApp Bot](#-whatsapp-bot)
-- [Configuration](#-configuration)
+- [Customization](#-customization)
 - [Troubleshooting](#-troubleshooting)
-- [Production Deployment](#-production-deployment)
-- [Contributing](#-contributing)
 
 ---
 
 ## 🎯 Overview
 
-This feature adds a complete Pomodoro timer system to TaskRanker with:
+Focus Mode brings the Pomodoro Technique to TaskRanker, helping users maintain focus and track productivity. Sessions are managed server-side with automatic scheduling and notifications.
 
-- **Visual Timer**: Beautiful countdown interface with progress tracking
-- **Server-Side Scheduling**: Sessions continue even if browser closes
-- **WhatsApp Integration**: Notifications via Twilio WhatsApp API
-- **Bot Commands**: Control Pomodoros via WhatsApp (START, STOP, STATUS)
-- **Session Management**: Automatic transitions between focus and break modes
-- **Analytics**: Track completed sessions and focus time
+### Key Features
+
+- **Pomodoro Timer**: 25-min focus + 5-min breaks
+- **Server-side Scheduling**: Sessions persist even if browser closes
+- **Browser Notifications**: Alerts when sessions complete
+- **Session History**: Track completed Pomodoros per day
+- **Automatic Transitions**: Auto-schedule breaks and focus sessions
+- **Pause/Resume**: Full session control
+- **Task Integration**: Link Pomodoros to specific tasks
 
 ---
 
 ## ✨ Features
 
-### 🎨 Frontend (React Component)
-- ✅ Big countdown timer with MM:SS display
+### Frontend
+- ✅ Visual countdown timer
+- ✅ Start/Pause/Resume controls
 - ✅ Task selection dropdown
-- ✅ Session progress indicator (1/4, 2/4, etc.)
-- ✅ Start/Pause/Resume/Reset controls
-- ✅ Today's statistics cards
-- ✅ Editable Pomodoro settings
-- ✅ Progress bar visualization
-- ✅ Browser alarm sound on completion
-- ✅ Auto-transition between modes
+- ✅ Session statistics display
+- ✅ Customizable durations
 
-### 🔧 Backend (API & Services)
-- ✅ RESTful API endpoints
-- ✅ Server-side job scheduler (node-cron)
-- ✅ WhatsApp integration (Twilio)
-- ✅ Database session tracking
-- ✅ Automatic notifications
-- ✅ Command processing (START, STOP, STATUS)
-- ✅ Mock mode for development
+### Backend
+- ✅ Scheduled job processing (node-cron)
+- ✅ Session persistence (MySQL)
+- ✅ Automatic break scheduling
+- ✅ Database cleanup (30-day retention)
 
-### 📊 Database
-- ✅ Session history tracking
-- ✅ User preferences storage
-- ✅ Notification job queue
-- ✅ WhatsApp message logs
-- ✅ Analytics data
+### Database
+- ✅ Pomodoro sessions
+- ✅ Notification jobs
+- ✅ User settings
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| **Frontend** | React 19, Next.js 16, TypeScript |
+| **Styling** | TailwindCSS |
+| **Backend** | Next.js API Routes |
+| **Scheduler** | node-cron |
+| **Database** | MySQL (via mysql2) |
+| **Timer Logic** | Client-side with server backup |
 
 ---
 
@@ -71,30 +73,30 @@ This feature adds a complete Pomodoro timer system to TaskRanker with:
 ### 1. Install Dependencies
 
 ```bash
-npm install twilio node-cron
+npm install node-cron
 ```
 
 ### 2. Run Database Migration
 
 ```bash
-mysql -u root taskranker_db < database_schema_pomodoro.sql
+mysql -u root -p taskranker_db < database_schema_pomodoro.sql
 ```
 
 ### 3. Configure Environment
 
-```bash
-# Copy example environment file
-cp .env.example .env.local
-
-# Add your database credentials (Twilio optional for now)
+```env
+# .env.local
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=taskranker_db
 ```
 
-### 4. Update User Phone Number
+### 4. Update User Timezone
 
 ```sql
 UPDATE users 
-SET phone_number = '+6281234567890',
-    whatsapp_verified = TRUE
+SET timezone = 'Asia/Jakarta'
 WHERE id = 1;
 ```
 
@@ -104,469 +106,159 @@ WHERE id = 1;
 npm run dev
 ```
 
-### 6. Navigate to Focus Mode
-
-Open http://localhost:3000 and click "Focus Mode" in the sidebar.
-
-**That's it!** 🎉 The feature will run in mock mode without Twilio credentials.
+**That's it!** 🎉 Navigate to Focus Mode from the sidebar.
 
 ---
 
 ## 📚 Documentation
 
-Complete documentation is available in these files:
-
-| Document | Description |
-|----------|-------------|
-| **POMODORO_INSTALLATION.md** | Step-by-step installation guide |
-| **POMODORO_ARCHITECTURE.md** | System architecture and design |
-| **POMODORO_SETUP.md** | Twilio WhatsApp setup guide |
-| **POMODORO_QUICK_REFERENCE.md** | API docs and commands |
-| **POMODORO_DIAGRAMS.md** | Visual diagrams and flows |
-| **POMODORO_IMPLEMENTATION_SUMMARY.md** | Feature overview |
+| File | Description |
+|------|-------------|
+| **POMODORO_SETUP.md** | Installation and configuration guide |
+| **POMODORO_ARCHITECTURE.md** | System design and data flow |
+| **POMODORO_IMPLEMENTATION_SUMMARY.md** | Code overview and API docs |
+| **POMODORO_DIAGRAMS.md** | Visual system diagrams |
+| **POMODORO_QUICK_REFERENCE.md** | Commands and API reference |
 
 ---
 
-## 🏗️ Architecture
-
-### High-Level Overview
+## 📁 Project Structure
 
 ```
-Frontend (React)  →  API Routes  →  Services  →  Database
-       ↓                                ↓
-   UI Timer                        Scheduler
-                                       ↓
-                                  WhatsApp API
+app/
+  api/
+    pomodoro/              # Pomodoro API routes
+      [id]/
+        route.ts           # Update/delete session
+      create/route.ts      # Create new session
+      active/route.ts      # Get active session
+      settings/route.ts    # User settings
+      stats/route.ts       # Session statistics
+      
+components/
+  pages/
+    focus-mode.tsx         # Main Pomodoro UI
+
+lib/
+  pomodoro-scheduler.ts    # Server-side job scheduler
+  db.ts                    # Database connection
+
+database_schema_pomodoro.sql  # Database tables
 ```
-
-### Components
-
-1. **Frontend Component** (`components/pages/focus-mode.tsx`)
-   - Timer display and controls
-   - Task selection
-   - Statistics dashboard
-
-2. **API Routes** (`app/api/pomodoro/*` & `app/api/whatsapp/webhook`)
-   - Start/pause/resume/stop endpoints
-   - Status retrieval
-   - WhatsApp webhook handler
-
-3. **Services** (`lib/`)
-   - `pomodoro-scheduler.ts` - Job scheduling and session management
-   - `whatsapp-service.ts` - Twilio integration and messaging
-
-4. **Database** (MySQL)
-   - `pomodoro_sessions` - Session tracking
-   - `notification_jobs` - Scheduled notifications
-   - `pomodoro_settings` - User preferences
-   - `whatsapp_messages` - Message logs
 
 ---
 
-## 📦 Installation
+## 💻 Installation
 
-See **[POMODORO_INSTALLATION.md](POMODORO_INSTALLATION.md)** for detailed instructions.
+### Prerequisites
 
-**Summary:**
+- Node.js v18+
+- MySQL 8+
+- npm or pnpm
 
-1. Install packages: `npm install twilio node-cron`
-2. Run SQL migration
-3. Configure `.env.local`
-4. Add phone number to user
-5. Initialize scheduler
-6. Update navigation
+### Step-by-Step
 
----
+1. Install packages: `npm install node-cron`
+2. Run database migration
+3. Configure environment variables
+4. Initialize scheduler (auto-runs on server start)
+5. Navigate to Focus Mode page
 
-## 💡 Usage
-
-### Starting a Pomodoro
-
-1. Navigate to **Focus Mode** page
-2. Select a task from the dropdown
-3. Adjust settings if needed (focus/break durations)
-4. Click **Start** button
-5. Timer begins countdown
-6. Work on your task!
-
-### During a Session
-
-- **Pause**: Click pause button (timer stops)
-- **Resume**: Click resume button (timer continues)
-- **Stop**: Click reset button (cancels session)
-
-### When Session Ends
-
-- Browser alarm plays
-- WhatsApp notification sent (if configured)
-- Automatically transitions to break mode
-- Session logged to database
-
-### Via WhatsApp Bot
-
-Send these messages to your Twilio WhatsApp number:
-
-- `START` - Begin Pomodoro for highest-priority task
-- `STOP` - Cancel active session
-- `STATUS` - View today's progress
-- `HELP` - Show available commands
+See **POMODORO_SETUP.md** for detailed instructions.
 
 ---
 
-## 🔌 API Reference
+## 📖 Usage
 
-### Endpoints
+### Via Web UI
 
-#### Start Pomodoro
-```http
-POST /api/pomodoro/start
-Content-Type: application/json
+1. **Navigate to Focus Mode** in sidebar
+2. **Select a task** from dropdown
+3. **Click Start** to begin 25-minute focus session
+4. **Work until timer completes** (or pause if needed)
+5. **Take a break** when prompted
+6. **Repeat** (long break after 4 sessions)
 
-{
-  "userId": 1,
-  "taskId": 5,
-  "mode": "focus",
-  "duration": 25,
-  "sessionNumber": 1
-}
-```
-
-#### Get Status
-```http
-GET /api/pomodoro/status?userId=1
-```
-
-#### Pause Session
-```http
-POST /api/pomodoro/pause
-Content-Type: application/json
-
-{
-  "userId": 1,
-  "sessionId": 123
-}
-```
-
-#### Resume Session
-```http
-POST /api/pomodoro/resume
-Content-Type: application/json
-
-{
-  "userId": 1,
-  "sessionId": 123
-}
-```
-
-#### Stop Session
-```http
-POST /api/pomodoro/stop
-Content-Type: application/json
-
-{
-  "userId": 1,
-  "sessionId": 123
-}
-```
-
-See **[POMODORO_QUICK_REFERENCE.md](POMODORO_QUICK_REFERENCE.md)** for complete API documentation.
+**Expected Behavior:**
+- Timer counts down visually
+- Session saved to database
+- Browser notification at completion
+- Auto-scheduled break starts
 
 ---
 
-## 📱 WhatsApp Bot
+## 🎨 Customization
 
-### Setup
+### Change Timer Durations
 
-1. **Create Twilio Account**
-   - Sign up at https://www.twilio.com
-   - Get $15 free credit
-
-2. **Join WhatsApp Sandbox**
-   - Navigate to Messaging → Try it out
-   - Send join code to Twilio number
-   - Example: `join happy-tiger-123`
-
-3. **Configure Webhook**
-   - Set webhook URL: `https://your-domain.com/api/whatsapp/webhook`
-   - Use ngrok for local testing
-
-4. **Add Credentials to `.env.local`**
-   ```env
-   TWILIO_ACCOUNT_SID=ACxxxxx
-   TWILIO_AUTH_TOKEN=your_token
-   TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
-   ```
-
-### Commands
-
-| Command | Action | Example Response |
-|---------|--------|------------------|
-| `START` | Start Pomodoro for top task | "🎯 Pomodoro started for Calculus Assignment" |
-| `STOP` | Cancel active session | "🛑 Session cancelled" |
-| `STATUS` | Show today's stats | "📊 3 sessions completed, 75 minutes" |
-| `HELP` | Show commands | "Commands: START, STOP, STATUS" |
-
-### Message Flow
-
-```
-User sends "START"
-  ↓
-Twilio forwards to webhook
-  ↓
-Backend parses command
-  ↓
-Starts Pomodoro session
-  ↓
-Sends confirmation message
-  ↓
-User receives reply
-```
-
-See **[POMODORO_SETUP.md](POMODORO_SETUP.md)** for detailed WhatsApp configuration.
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-```env
-# Database
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=taskranker_db
-
-# Twilio WhatsApp (optional for development)
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
-
-# Application
-NODE_ENV=development
-```
-
-### Pomodoro Settings
-
-Default settings can be customized per user:
+Edit `components/pages/focus-mode.tsx`:
 
 ```typescript
-{
+const DEFAULT_SETTINGS = {
   focusDuration: 25,           // minutes
-  shortBreakDuration: 5,       // minutes
-  longBreakDuration: 15,       // minutes
-  sessionsBeforeLongBreak: 4,  // number of sessions
-  enableWhatsAppNotifications: true,
-  enableBrowserSound: true,
-  enableAutoStartBreaks: true
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  sessionsBeforeLongBreak: 4
 }
 ```
 
-Stored in `pomodoro_settings` table per user.
+### Add Custom Alarm
+
+Place `alarm.mp3` in `public/` folder or update:
+
+```typescript
+alarmAudioRef.current = new Audio('/your-alarm.mp3')
+```
+
+### Adjust Data Retention
+
+Edit `lib/pomodoro-scheduler.ts`:
+
+```typescript
+const daysToKeep = 30; // Change to your preference
+```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Timer doesn't appear
+- Check that database migration ran successfully
+- Verify user exists in `users` table
+- Check browser console for errors
 
-#### 1. "Cannot find module 'twilio'"
-**Solution:** Run `npm install twilio node-cron`
+### Sessions not saving
+- Verify database connection in `lib/db.ts`
+- Check server logs for errors
+- Confirm `pomodoro_sessions` table exists
 
-#### 2. No WhatsApp notifications
-**Checklist:**
-- ✅ Phone number in database matches WhatsApp exactly
-- ✅ `whatsapp_verified = TRUE` in users table
-- ✅ Twilio credentials correct in `.env.local`
-- ✅ Joined Twilio WhatsApp sandbox
-- ✅ Webhook URL configured
+### Scheduler not running
+- Ensure server is running (`npm run dev`)
+- Check logs for "Pomodoro Scheduler initialized"
+- Verify node-cron is installed
 
-#### 3. Timer not counting down
-**Solution:** Check browser console for errors. Verify API endpoints are accessible.
-
-#### 4. Scheduler not running
-**Solution:** Ensure `/api/init` endpoint is called on app startup. Check server logs.
-
-#### 5. Database errors
-**Solution:** Run migration again. Verify table structure matches schema.
-
-### Debug Mode
-
-Enable detailed logging:
-
-```typescript
-// In lib/pomodoro-scheduler.ts
-console.log('DEBUG:', jobDetails);
-```
-
-Check console and server logs for diagnostic information.
+### No browser notifications
+- Grant notification permissions in browser
+- Check notification API is supported
+- Verify browser is in focus
 
 ---
 
-## 🚀 Production Deployment
+## 🎉 Success!
 
-### Pre-Deployment Checklist
+Your Pomodoro Timer is now fully operational!
 
-- [ ] Replace node-cron with BullMQ + Redis
-- [ ] Use Meta WhatsApp Cloud API (not Twilio sandbox)
-- [ ] Add proper error handling and retry logic
-- [ ] Implement rate limiting on webhooks
-- [ ] Add monitoring (Sentry, DataDog, etc.)
-- [ ] Enable HTTPS for all endpoints
-- [ ] Set up job queue dashboard
-- [ ] Add WebSocket for real-time sync
-- [ ] Configure production database
-- [ ] Set up automated backups
+**What's Working:**
+✅ Visual countdown timer  
+✅ Session persistence  
+✅ Automatic scheduling  
+✅ Task integration  
+✅ Statistics tracking  
 
-### Scalability Recommendations
+**Next Steps:**
+- Add more focus sessions
+- Review your productivity stats
+- Customize durations to fit your workflow
+- Enable browser notifications for alerts
 
-1. **Job Queue**: Use BullMQ with Redis instead of node-cron
-   ```bash
-   npm install bullmq ioredis
-   ```
-
-2. **WhatsApp API**: Switch to Meta's Cloud API for better rates
-   - Documentation: https://developers.facebook.com/docs/whatsapp/cloud-api
-
-3. **Real-time Sync**: Implement WebSocket or Server-Sent Events
-   - Sync timer across multiple devices
-   - Live notifications
-
-4. **Caching**: Use Redis for active session cache
-   - Reduce database queries
-   - Faster status checks
-
-5. **Monitoring**: Add comprehensive logging
-   - Track notification delivery rates
-   - Monitor job execution times
-   - Alert on failures
-
----
-
-## 🤝 Contributing
-
-### Development Workflow
-
-1. **Fork the repository**
-2. **Create feature branch**
-   ```bash
-   git checkout -b feature/pomodoro-enhancement
-   ```
-3. **Make changes**
-4. **Test thoroughly**
-   - Unit tests
-   - Integration tests
-   - Manual testing
-5. **Submit pull request**
-
-### Code Style
-
-- Use TypeScript for type safety
-- Follow existing code patterns
-- Add comments for complex logic
-- Update documentation
-
-### Testing
-
-```bash
-# Run tests
-npm test
-
-# Test WhatsApp integration
-npm run test:whatsapp
-
-# Test scheduler
-npm run test:scheduler
-```
-
----
-
-## 📄 License
-
-This feature is part of the TaskRanker ML Web project.
-
----
-
-## 🙏 Acknowledgments
-
-- **Twilio** for WhatsApp API
-- **node-cron** for job scheduling
-- **React** for UI components
-- **Next.js** for API routes
-
----
-
-## 📞 Support
-
-For questions or issues:
-
-1. Check **Troubleshooting** section above
-2. Review documentation files
-3. Open an issue on GitHub
-4. Contact development team
-
----
-
-## 🎉 Success Stories
-
-> "Completed 8 Pomodoro sessions today with automatic WhatsApp reminders. So productive!" - Student A
-
-> "Love being able to control my focus sessions via WhatsApp. Never miss a break!" - Student B
-
----
-
-## 📈 Statistics
-
-- **Lines of Code**: 2,500+
-- **API Endpoints**: 6
-- **Database Tables**: 4
-- **Documentation Files**: 8
-- **Features**: All requirements met ✓
-
----
-
-## 🗺️ Roadmap
-
-### Version 1.0 (Current)
-- ✅ Basic Pomodoro timer
-- ✅ WhatsApp notifications
-- ✅ Bot commands
-- ✅ Session tracking
-
-### Version 1.1 (Planned)
-- [ ] Team Pomodoro sessions
-- [ ] Custom sound alerts
-- [ ] Desktop notifications
-- [ ] Pomodoro streaks
-
-### Version 2.0 (Future)
-- [ ] AI-powered task scheduling
-- [ ] Focus music integration
-- [ ] Productivity insights
-- [ ] Mobile app
-
----
-
-## 🌟 Features at a Glance
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Visual Timer | ✅ | React component with countdown |
-| Task Selection | ✅ | Dropdown with priority sorting |
-| Start/Pause/Resume | ✅ | Full session control |
-| WhatsApp Notifications | ✅ | Via Twilio API |
-| Bot Commands | ✅ | START, STOP, STATUS |
-| Server-Side Scheduling | ✅ | Works when browser closed |
-| Session History | ✅ | Stored in database |
-| Analytics | ✅ | Daily stats and trends |
-| Auto-Transitions | ✅ | Focus → Break → Focus |
-| Settings Customization | ✅ | Per-user preferences |
-
----
-
-**Built with ❤️ for productive students everywhere!** 🎓
-
----
-
-Last updated: 2025-11-26
-Version: 1.0.0
+For more help, see the documentation files listed above.

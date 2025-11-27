@@ -1,15 +1,13 @@
 -- =====================================================
--- Pomodoro Timer & WhatsApp Bot Database Schema
+-- Pomodoro Timer Database Schema
 -- =====================================================
 
--- Update users table to include phone number for WhatsApp
+-- Update users table for timezone
 ALTER TABLE users 
-ADD COLUMN phone_number VARCHAR(20) NULL COMMENT 'WhatsApp phone number with country code (e.g., +628xxx)',
-ADD COLUMN whatsapp_verified BOOLEAN DEFAULT FALSE COMMENT 'Whether phone number is verified for WhatsApp',
 ADD COLUMN timezone VARCHAR(50) DEFAULT 'Asia/Jakarta' COMMENT 'User timezone for scheduling';
 
--- Index for quick phone number lookups
-CREATE INDEX idx_phone_number ON users(phone_number);
+-- Index for timezone lookups
+CREATE INDEX idx_timezone ON users(timezone);
 
 -- =====================================================
 -- Pomodoro Sessions Table
@@ -37,10 +35,6 @@ CREATE TABLE pomodoro_sessions (
     -- Completion tracking
     completed_successfully BOOLEAN DEFAULT FALSE,
     interrupted BOOLEAN DEFAULT FALSE COMMENT 'Whether user stopped early',
-    
-    -- WhatsApp notification tracking
-    whatsapp_reminder_sent BOOLEAN DEFAULT FALSE,
-    whatsapp_reminder_sent_at DATETIME NULL,
     
     -- Metadata
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -82,11 +76,6 @@ CREATE TABLE notification_jobs (
     completed_at DATETIME NULL,
     error_message TEXT NULL,
     
-    -- WhatsApp message details
-    message_template VARCHAR(100) NULL COMMENT 'Template name for message',
-    message_data JSON NULL COMMENT 'Data to fill template (task name, etc)',
-    whatsapp_message_sid VARCHAR(100) NULL COMMENT 'Twilio message SID',
-    
     -- Metadata
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -117,7 +106,6 @@ CREATE TABLE pomodoro_settings (
     sessions_before_long_break INT DEFAULT 4,
     
     -- Notification preferences
-    enable_whatsapp_notifications BOOLEAN DEFAULT TRUE,
     enable_browser_sound BOOLEAN DEFAULT TRUE,
     enable_auto_start_breaks BOOLEAN DEFAULT TRUE,
     enable_auto_start_focus BOOLEAN DEFAULT FALSE COMMENT 'Auto start next focus after break',
@@ -133,43 +121,7 @@ CREATE TABLE pomodoro_settings (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =====================================================
--- WhatsApp Message Log (For debugging and analytics)
--- =====================================================
-CREATE TABLE whatsapp_messages (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    
-    -- Message details
-    user_id INT NOT NULL,
-    direction ENUM('outgoing', 'incoming') NOT NULL,
-    phone_number VARCHAR(20) NOT NULL,
-    
-    -- Content
-    message_body TEXT NOT NULL,
-    message_sid VARCHAR(100) NULL COMMENT 'Twilio message SID',
-    
-    -- Context
-    pomodoro_session_id INT NULL,
-    command VARCHAR(50) NULL COMMENT 'Parsed command from user (START, STOP, etc)',
-    
-    -- Status
-    status ENUM('queued', 'sent', 'delivered', 'failed', 'received') NOT NULL,
-    error_message TEXT NULL,
-    
-    -- Timestamps
-    sent_at DATETIME NULL,
-    delivered_at DATETIME NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Foreign keys
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (pomodoro_session_id) REFERENCES pomodoro_sessions(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Indexes
-CREATE INDEX idx_user_messages ON whatsapp_messages(user_id, created_at DESC);
-CREATE INDEX idx_message_sid ON whatsapp_messages(message_sid);
-CREATE INDEX idx_direction ON whatsapp_messages(direction, created_at DESC);
 
 -- =====================================================
 -- Sample Data for Testing

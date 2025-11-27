@@ -573,11 +573,11 @@ export default function FocusModePage() {
                   <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-foreground font-semibold mb-1">
-                      Focus Mode with WhatsApp Reminders
+                      Focus Mode with Browser Reminders
                     </p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      When your Pomodoro session ends, you'll receive a WhatsApp notification even if you close this tab.
-                      Reply with START, STOP, or STATUS to control your sessions via WhatsApp!
+                      When your Pomodoro session ends, you'll receive a browser notification even if you minimize this tab.
+                      The timer will continue running in the background!
                     </p>
                   </div>
                 </div>

@@ -14,21 +14,15 @@ Your TaskRanker app now features a complete **Machine Learning-based Priority Sy
 2. **Database Integration**
    - All tasks stored in MySQL with ML-calculated `priority_score`
    - Task types store default difficulty/weight values
-   - WhatsApp messages logged to database
 
 3. **API Endpoints**
    - `/api/tasks` - Auto-calculates priority when creating/updating tasks
    - `/api/ml/calculate-priority` - Direct ML calculation endpoint
-   - `/api/whatsapp/send-tasks` - Sends prioritized task list via WhatsApp
 
 4. **Dashboard**
    - Fetches real tasks from database
    - Displays ML-calculated priorities
    - Shows statistics based on priority scores
-
-5. **WhatsApp Integration**
-   - Sends task lists sorted by ML priority
-   - Bot commands: LIST, PRIORITY, TODAY, HELP
 
 ---
 
@@ -91,10 +85,6 @@ npm run dev
 2. **Check Dashboard**:
    - Navigate to `http://localhost:3000`
    - Tasks should appear with ML-calculated priorities
-
-3. **Test WhatsApp** (optional):
-   - Send "LIST" command to bot
-   - Receive task list sorted by priority
 
 ---
 
@@ -220,24 +210,12 @@ Replace hardcoded `user_id = 1` with actual user authentication
 
 ---
 
-## 📱 WhatsApp Commands
-
-Once Twilio is configured:
-
-- `LIST` - Get all incomplete tasks (sorted by priority)
-- `PRIORITY` - Get only high-priority tasks (>70 score)
-- `TODAY` - Get tasks due today
-- `HELP` - Show available commands
-
----
-
 ## ✨ Success!
 
 Your TaskRanker app now has:
 - ✅ Python ML model for intelligent priority calculation
 - ✅ Database-backed task management
 - ✅ Real-time priority updates
-- ✅ WhatsApp integration for reminders
 - ✅ Modern React dashboard
 
 **Happy tasking!** 🎯

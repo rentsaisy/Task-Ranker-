@@ -8,7 +8,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { cancelNotification } from '@/lib/pomodoro-scheduler';
-import { sendWhatsAppMessage, MESSAGE_TEMPLATES } from '@/lib/whatsapp-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,21 +52,6 @@ export async function POST(request: NextRequest) {
 
     // Cancel scheduled notifications
     await cancelNotification(targetSessionId);
-
-    // Send WhatsApp notification
-    const [users] = await pool.query<any[]>(
-      `SELECT phone_number, whatsapp_verified FROM users WHERE id = ?`,
-      [userId]
-    );
-
-    if (users[0]?.whatsapp_verified && users[0]?.phone_number) {
-      await sendWhatsAppMessage({
-        userId,
-        phoneNumber: users[0].phone_number,
-        message: MESSAGE_TEMPLATES.SESSION_CANCELLED(),
-        pomodoroSessionId: targetSessionId,
-      });
-    }
 
     return NextResponse.json({
       success: true,

@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const taskName = tasks[0]?.name || 'Unknown Task';
 
-    // Session started successfully (WhatsApp notifications removed)
+    // Session started successfully
 
     return NextResponse.json({
       success: true,

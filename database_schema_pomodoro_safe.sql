@@ -1,15 +1,13 @@
 -- =====================================================
--- Pomodoro Timer & WhatsApp Bot Database Schema (Safe Migration)
+-- Pomodoro Timer Database Schema (Safe Migration)
 -- =====================================================
 
--- Update users table to include phone number for WhatsApp (if not exists)
+-- Update users table to include timezone (if not exists)
 ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20) NULL COMMENT 'WhatsApp phone number with country code (e.g., +628xxx)',
-ADD COLUMN IF NOT EXISTS whatsapp_verified BOOLEAN DEFAULT FALSE COMMENT 'Whether phone number is verified for WhatsApp',
 ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'Asia/Jakarta' COMMENT 'User timezone for scheduling';
 
--- Index for quick phone number lookups (if not exists)
-CREATE INDEX IF NOT EXISTS idx_phone_number ON users(phone_number);
+-- Index for timezone lookups (if not exists)
+CREATE INDEX IF NOT EXISTS idx_timezone ON users(timezone);
 
 -- =====================================================
 -- Pomodoro Sessions Table
@@ -101,7 +99,6 @@ CREATE TABLE IF NOT EXISTS pomodoro_settings (
     sessions_before_long_break INT DEFAULT 4,
     
     -- Notification preferences
-    enable_whatsapp_notifications BOOLEAN DEFAULT TRUE,
     enable_browser_sound BOOLEAN DEFAULT TRUE,
     enable_auto_start_breaks BOOLEAN DEFAULT TRUE,
     enable_auto_start_pomodoros BOOLEAN DEFAULT FALSE,
@@ -116,45 +113,7 @@ CREATE TABLE IF NOT EXISTS pomodoro_settings (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =====================================================
--- WhatsApp Messages Log Table
--- =====================================================
-CREATE TABLE IF NOT EXISTS whatsapp_messages (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    pomodoro_session_id INT NULL,
-    
-    -- Message details
-    direction ENUM('outgoing', 'incoming') NOT NULL,
-    from_number VARCHAR(20) NOT NULL,
-    to_number VARCHAR(20) NOT NULL,
-    message_body TEXT NOT NULL,
-    
-    -- Twilio details
-    twilio_sid VARCHAR(50) NULL COMMENT 'Twilio message SID',
-    status VARCHAR(20) NULL COMMENT 'Twilio delivery status',
-    error_code INT NULL,
-    error_message TEXT NULL,
-    
-    -- Processing
-    is_command BOOLEAN DEFAULT FALSE COMMENT 'Whether this is a bot command',
-    command_type VARCHAR(50) NULL COMMENT 'Type of command (START, STOP, STATUS, etc.)',
-    command_processed BOOLEAN DEFAULT FALSE,
-    
-    -- Metadata
-    sent_at DATETIME NOT NULL,
-    delivered_at DATETIME NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (pomodoro_session_id) REFERENCES pomodoro_sessions(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Indexes for message queries
-CREATE INDEX IF NOT EXISTS idx_user_messages ON whatsapp_messages(user_id, sent_at DESC);
-CREATE INDEX IF NOT EXISTS idx_twilio_sid ON whatsapp_messages(twilio_sid);
-CREATE INDEX IF NOT EXISTS idx_commands ON whatsapp_messages(is_command, command_processed);
-CREATE INDEX IF NOT EXISTS idx_session_messages ON whatsapp_messages(pomodoro_session_id);
 
 -- =====================================================
 -- Sample Data / Initial Settings

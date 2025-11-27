@@ -41,14 +41,13 @@ async function processPendingJobs() {
     // Get jobs that are due for execution
     const [jobs] = await pool.query<any[]>(
       `SELECT nj.*, ps.user_id, ps.task_id, ps.mode, ps.session_number,
-              t.name as task_name, u.phone_number, u.whatsapp_verified
+              t.name as task_name
        FROM notification_jobs nj
        JOIN pomodoro_sessions ps ON nj.pomodoro_session_id = ps.id
        JOIN tasks t ON ps.task_id = t.id
        JOIN users u ON ps.user_id = u.id
        WHERE nj.status = 'pending'
          AND nj.scheduled_at <= NOW()
-         AND u.whatsapp_verified = TRUE
        ORDER BY nj.scheduled_at ASC
        LIMIT 10`
     );
@@ -77,25 +76,17 @@ async function executeJob(job: any) {
       [jobId]
     );
 
-    // WhatsApp notifications disabled (now using task list reminders instead)
-    // Mark job as completed
-    const result = { success: true, messageSid: null };
+    // Notification logic can be added here (browser notifications, email, etc.)
+    // For now, just mark job as completed
+    const result = { success: true };
 
     if (result?.success) {
       // Mark job as completed
       await pool.query(
         `UPDATE notification_jobs 
-         SET status = 'completed', completed_at = NOW(), whatsapp_message_sid = ?
+         SET status = 'completed', completed_at = NOW()
          WHERE id = ?`,
-        [result.messageSid, jobId]
-      );
-
-      // Update Pomodoro session
-      await pool.query(
-        `UPDATE pomodoro_sessions 
-         SET whatsapp_reminder_sent = TRUE, whatsapp_reminder_sent_at = NOW()
-         WHERE id = ?`,
-        [job.pomodoro_session_id]
+        [jobId]
       );
 
       // Auto-transition to next mode if applicable
