@@ -14,20 +14,20 @@ export async function POST(request: NextRequest) {
 
     await pool.query(
       `UPDATE pomodoro_sessions 
-       SET status = 'active', paused_at = NULL
+       SET status = 'completed', end_time = NOW()
        WHERE id = ?`,
       [sessionId]
     );
 
     return NextResponse.json({
       success: true,
-      message: 'Timer resumed',
+      message: 'Timer completed',
     });
 
   } catch (error: any) {
-    console.error('Error resuming timer:', error);
+    console.error('Error completing timer:', error);
     return NextResponse.json(
-      { error: 'Failed to resume timer', details: error.message },
+      { error: 'Failed to complete timer', details: error.message },
       { status: 500 }
     );
   }

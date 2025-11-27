@@ -1,48 +1,28 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Play, Pause, RotateCcw, Clock, Target, TrendingUp, Sparkles, CheckCircle } from "lucide-react"
+import { Play, Pause, RotateCcw, Clock, Timer, CheckCircle, Settings as SettingsIcon } from "lucide-react"
 
-interface Task {
-  id: number
-  name: string
-  taskType: string
-  priority: number
-}
-
-type PomodoroMode = 'focus' | 'short_break' | 'long_break'
 type TimerStatus = 'idle' | 'active' | 'paused'
-
-interface PomodoroSettings {
-  focusDuration: number // minutes
-  shortBreakDuration: number
-  longBreakDuration: number
-  sessionsBeforeLongBreak: number
-}
-
-const DEFAULT_SETTINGS: PomodoroSettings = {
-  focusDuration: 25,
-  shortBreakDuration: 5,
-  longBreakDuration: 15,
-  sessionsBeforeLongBreak: 4,
-}
+type SessionType = 'work' | 'break'
 
 export default function FocusModePage() {
-  // State management
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [settings, setSettings] = useState<PomodoroSettings>(DEFAULT_SETTINGS)
-  
-  // Pomodoro state
-  const [mode, setMode] = useState<PomodoroMode>('focus')
-  const [sessionNumber, setSessionNumber] = useState(1)
+  // Timer state
+  const [workDuration, setWorkDuration] = useState(25) // minutes
+  const [breakDuration, setBreakDuration] = useState(5) // minutes
   const [status, setStatus] = useState<TimerStatus>('idle')
-  const [remainingSeconds, setRemainingSeconds] = useState(DEFAULT_SETTINGS.focusDuration * 60)
+  const [sessionType, setSessionType] = useState<SessionType>('work')
+  const [remainingSeconds, setRemainingSeconds] = useState(25 * 60)
+  const [autoStartBreak, setAutoStartBreak] = useState(false)
   
   // Session tracking
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null)
   const [completedToday, setCompletedToday] = useState(0)
   const [totalMinutesToday, setTotalMinutesToday] = useState(0)
+  
+  // Settings
+  const [showSettings, setShowSettings] = useState(false)
+  const [enableSound, setEnableSound] = useState(true)
   
   // Audio for alarm
   const alarmAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -51,13 +31,15 @@ export default function FocusModePage() {
   // Mock user ID (in real app, get from auth context)
   const userId = 1
 
-  // Load tasks and status on mount
+  // Load tasks and settings on mount
   useEffect(() => {
-    loadTasks()
-    loadPomodoroStatus()
+    loadSettings()
+    loadTodayStats()
     
-    // Initialize alarm audio
-    alarmAudioRef.current = new Audio('/alarm.mp3') // You'll need to add an alarm sound file
+    // Try to initialize alarm audio
+    if (typeof Audio !== 'undefined') {
+      alarmAudioRef.current = new Audio('/alarm.mp3')
+    }
     
     return () => {
       if (timerIntervalRef.current) {
@@ -91,500 +73,553 @@ export default function FocusModePage() {
     }
   }, [status])
 
-  /**
-   * Load user's tasks from database
-   */
-  async function loadTasks() {
-    try {
-      const response = await fetch(`/api/tasks?userId=${userId}`)
-      const data = await response.json()
-      
-      // Transform data to match Task interface
-      const transformedTasks: Task[] = data.map((task: any) => ({
-        id: task.id,
-        name: task.title,
-        taskType: task.task_type_name || 'Other',
-        priority: Math.round(task.priority_score || 0)
-      }))
-      
-      setTasks(transformedTasks)
-      
-      // Auto-select highest priority task
-      if (transformedTasks.length > 0) {
-        setSelectedTask(transformedTasks[0])
-      }
-    } catch (error) {
-      console.error('Error loading tasks:', error)
+  // Update remaining seconds when duration changes
+  useEffect(() => {
+    if (status === 'idle') {
+      const currentDuration = sessionType === 'work' ? workDuration : breakDuration
+      setRemainingSeconds(currentDuration * 60)
     }
-  }
+  }, [workDuration, breakDuration, sessionType, status])
 
   /**
-   * Load current Pomodoro status from backend
+   * Load user settings
    */
-  async function loadPomodoroStatus() {
+  async function loadSettings() {
     try {
-      const response = await fetch(`/api/pomodoro/status?userId=${userId}`)
-      const data = await response.json()
-
-      if (data.success) {
-        // Update today's stats
-        setCompletedToday(data.data.todayStats.completedFocus)
-        setTotalMinutesToday(data.data.todayStats.totalFocusMinutes)
-
-        // If there's an active session, restore it
-        if (data.data.activeSession) {
-          const session = data.data.activeSession
-          setCurrentSessionId(session.id)
-          setMode(session.mode)
-          setSessionNumber(session.sessionNumber)
-          
-          // Calculate remaining time
-          const endTime = new Date(session.endTime).getTime()
-          const now = Date.now()
-          const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
-          
-          setRemainingSeconds(remaining)
-          setStatus(session.status === 'paused' ? 'paused' : 'active')
-          
-          // Find and select the task
-          const task = tasks.find(t => t.id === session.taskId)
-          if (task) setSelectedTask(task)
+      const response = await fetch(`/api/pomodoro/settings?userId=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.default_duration) {
+          setWorkDuration(data.default_duration)
+          setRemainingSeconds(data.default_duration * 60)
+        }
+        if (typeof data.enable_sound === 'boolean') {
+          setEnableSound(data.enable_sound)
         }
       }
     } catch (error) {
-      console.error('Error loading Pomodoro status:', error)
+      console.error('Error loading settings:', error)
     }
   }
 
   /**
-   * Start Pomodoro session
+   * Load today's statistics
    */
-  async function startPomodoro() {
-    if (!selectedTask) {
-      alert('Please select a task first!')
-      return
+  async function loadTodayStats() {
+    try {
+      const response = await fetch(`/api/pomodoro/stats?userId=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setCompletedToday(data.completed_today || 0)
+        setTotalMinutesToday(data.total_minutes || 0)
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error)
     }
+  }
 
+  /**
+   * Save settings
+   */
+  async function saveSettings() {
+    try {
+      await fetch(`/api/pomodoro/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          default_duration: workDuration,
+          enable_sound: enableSound,
+        }),
+      })
+      setShowSettings(false)
+    } catch (error) {
+      console.error('Error saving settings:', error)
+    }
+  }
+
+  /**
+   * Start timer
+   */
+  async function handleStart() {
+    const currentDuration = sessionType === 'work' ? workDuration : breakDuration
+    
     try {
       const response = await fetch('/api/pomodoro/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          taskId: selectedTask.id,
-          mode,
-          duration: settings.focusDuration,
-          sessionNumber,
+          taskId: null,
+          duration: currentDuration,
         }),
       })
 
       const data = await response.json()
-
+      
       if (data.success) {
         setCurrentSessionId(data.sessionId)
-        setRemainingSeconds(data.data.duration * 60)
-        setStatus('active')
-        console.log('✅ Pomodoro started:', data)
-      } else {
-        alert(data.error || 'Failed to start Pomodoro')
-      }
-    } catch (error) {
-      console.error('Error starting Pomodoro:', error)
-      alert('Error starting Pomodoro session')
-    }
-  }
-
-  /**
-   * Pause active session
-   */
-  async function pausePomodoro() {
-    try {
-      const response = await fetch('/api/pomodoro/pause', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, sessionId: currentSessionId }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setStatus('paused')
-      }
-    } catch (error) {
-      console.error('Error pausing Pomodoro:', error)
-    }
-  }
-
-  /**
-   * Resume paused session
-   */
-  async function resumePomodoro() {
-    try {
-      const response = await fetch('/api/pomodoro/resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, sessionId: currentSessionId }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
         setStatus('active')
       }
     } catch (error) {
-      console.error('Error resuming Pomodoro:', error)
+      console.error('Error starting session:', error)
+      // Start anyway for offline use
+      setStatus('active')
     }
   }
 
   /**
-   * Stop/cancel current session
+   * Pause timer
    */
-  async function stopPomodoro() {
-    if (!confirm('Are you sure you want to stop this Pomodoro session?')) {
-      return
-    }
-
-    try {
-      const response = await fetch('/api/pomodoro/stop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, sessionId: currentSessionId }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        resetTimer()
+  async function handlePause() {
+    if (currentSessionId) {
+      try {
+        await fetch('/api/pomodoro/pause', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSessionId,
+            timeRemaining: remainingSeconds,
+          }),
+        })
+      } catch (error) {
+        console.error('Error pausing session:', error)
       }
-    } catch (error) {
-      console.error('Error stopping Pomodoro:', error)
     }
+
+    setStatus('paused')
   }
 
   /**
-   * Reset timer to initial state
+   * Resume timer
    */
-  function resetTimer() {
+  async function handleResume() {
+    if (currentSessionId) {
+      try {
+        await fetch('/api/pomodoro/resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSessionId,
+          }),
+        })
+      } catch (error) {
+        console.error('Error resuming session:', error)
+      }
+    }
+
+    setStatus('active')
+  }
+
+  /**
+   * Reset timer
+   */
+  async function handleReset() {
+    if (currentSessionId && (status === 'active' || status === 'paused')) {
+      // Cancel the current session
+      try {
+        await fetch('/api/pomodoro/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSessionId,
+          }),
+        })
+      } catch (error) {
+        console.error('Error cancelling session:', error)
+      }
+    }
+
     setStatus('idle')
-    setRemainingSeconds(settings.focusDuration * 60)
-    setMode('focus')
-    setSessionNumber(1)
+    setSessionType('work')
+    const currentDuration = workDuration
+    setRemainingSeconds(currentDuration * 60)
     setCurrentSessionId(null)
   }
 
   /**
-   * Handle timer completion
+   * Timer completion
    */
-  function handleTimerComplete() {
+  async function handleTimerComplete() {
+    setStatus('idle')
+    
+    const currentDuration = sessionType === 'work' ? workDuration : breakDuration
+
     // Play alarm sound
-    if (alarmAudioRef.current) {
-      alarmAudioRef.current.play().catch(e => console.error('Error playing alarm:', e))
+    if (enableSound && alarmAudioRef.current) {
+      try {
+        alarmAudioRef.current.play()
+      } catch (error) {
+        console.error('Error playing alarm:', error)
+      }
     }
 
-    // Show notification
+    // Show browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Pomodoro Complete!', {
-        body: mode === 'focus' 
-          ? 'Time for a break!' 
-          : 'Break is over! Ready to focus?',
+      const message = sessionType === 'work' 
+        ? `Work session complete! Time for a ${breakDuration} minute break.`
+        : `Break is over! Ready for another ${workDuration} minute work session?`
+      
+      new Notification(sessionType === 'work' ? 'Work Complete! 🎉' : 'Break Over! ⚡', {
+        body: message,
         icon: '/icon.png',
       })
     }
 
-    // Auto-transition to next mode
-    transitionToNextMode()
-  }
+    // Mark session as completed (only for work sessions)
+    if (currentSessionId && sessionType === 'work') {
+      try {
+        await fetch('/api/pomodoro/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSessionId,
+          }),
+        })
 
-  /**
-   * Transition to next Pomodoro mode
-   */
-  function transitionToNextMode() {
-    if (mode === 'focus') {
-      // Update completed count
-      setCompletedToday(prev => prev + 1)
-      setTotalMinutesToday(prev => prev + settings.focusDuration)
+        // Reload stats
+        loadTodayStats()
+      } catch (error) {
+        console.error('Error completing session:', error)
+      }
+    }
 
-      // Determine break type
-      if (sessionNumber >= settings.sessionsBeforeLongBreak) {
-        setMode('long_break')
-        setRemainingSeconds(settings.longBreakDuration * 60)
-        setSessionNumber(1)
-      } else {
-        setMode('short_break')
-        setRemainingSeconds(settings.shortBreakDuration * 60)
+    setCurrentSessionId(null)
+
+    // Switch between work and break
+    if (sessionType === 'work') {
+      setSessionType('break')
+      setRemainingSeconds(breakDuration * 60)
+      
+      // Auto-start break if enabled
+      if (autoStartBreak) {
+        setTimeout(() => {
+          handleStart()
+        }, 2000)
       }
     } else {
-      // After break, return to focus
-      setMode('focus')
-      setRemainingSeconds(settings.focusDuration * 60)
-      if (mode === 'short_break') {
-        setSessionNumber(prev => prev + 1)
-      }
-    }
-
-    setStatus('idle')
-    setCurrentSessionId(null)
-  }
-
-  /**
-   * Format seconds to MM:SS
-   */
-  function formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-
-  /**
-   * Get mode display info
-   */
-  function getModeInfo() {
-    switch (mode) {
-      case 'focus':
-        return { label: 'Focus Time', color: 'text-primary', bgColor: 'bg-primary/10' }
-      case 'short_break':
-        return { label: 'Short Break', color: 'text-accent', bgColor: 'bg-accent/10' }
-      case 'long_break':
-        return { label: 'Long Break', color: 'text-blue-500', bgColor: 'bg-blue-500/10' }
+      setSessionType('work')
+      setRemainingSeconds(workDuration * 60)
     }
   }
 
-  const modeInfo = getModeInfo()
-  const progress = mode === 'focus' 
-    ? (1 - remainingSeconds / (settings.focusDuration * 60)) * 100
-    : mode === 'short_break'
-    ? (1 - remainingSeconds / (settings.shortBreakDuration * 60)) * 100
-    : (1 - remainingSeconds / (settings.longBreakDuration * 60)) * 100
+  /**
+   * Request notification permission
+   */
+  function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }
+
+  // Format time display
+  const minutes = Math.floor(remainingSeconds / 60)
+  const seconds = remainingSeconds % 60
+  const timeDisplay = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  const currentDuration = sessionType === 'work' ? workDuration : breakDuration
+  const progressPercentage = ((currentDuration * 60 - remainingSeconds) / (currentDuration * 60)) * 100
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background">
+      <div className="max-w-4xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center justify-center gap-3">
+            <Timer className="w-8 h-8 text-primary" />
+            Pomodoro Timer
+          </h1>
+          <p className="text-muted-foreground">
+            Work focused, rest well - stay productive!
+          </p>
+        </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-card rounded-xl border border-border p-6 smooth-transition hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground font-medium">Today's Sessions</p>
-                <p className="text-3xl font-bold text-foreground mt-2">{completedToday}</p>
-              </div>
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-primary" />
-              </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Completed Today</span>
             </div>
+            <p className="text-2xl font-bold text-foreground">{completedToday}</p>
           </div>
-
-          <div className="bg-card rounded-xl border border-border p-6 smooth-transition hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground font-medium">Focus Time</p>
-                <p className="text-3xl font-bold text-foreground mt-2">{totalMinutesToday}m</p>
-              </div>
-              <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-accent" />
-              </div>
+          <div className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Minutes Today</span>
             </div>
-          </div>
-
-          <div className="bg-card rounded-xl border border-border p-6 smooth-transition hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground font-medium">Current Session</p>
-                <p className="text-3xl font-bold text-foreground mt-2">{sessionNumber}/4</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <Target className="w-6 h-6 text-blue-500" />
-              </div>
-            </div>
+            <p className="text-2xl font-bold text-foreground">{totalMinutesToday}</p>
           </div>
         </div>
 
-        {/* Main Pomodoro Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Task Selection */}
-          <div className="lg:col-span-1">
-            <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition">
-              <h2 className="text-lg font-bold text-foreground mb-4">Select Task</h2>
-              <div className="space-y-2">
-                {tasks.map(task => (
-                  <button
-                    key={task.id}
-                    onClick={() => setSelectedTask(task)}
-                    disabled={status === 'active'}
-                    className={`w-full text-left p-4 rounded-lg border transition-all smooth-transition ${
-                      selectedTask?.id === task.id
-                        ? 'bg-primary/10 border-primary'
-                        : 'bg-secondary/30 border-border hover:bg-secondary/50'
-                    } ${status === 'active' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-foreground text-sm mb-1">{task.name}</p>
-                        <p className="text-xs text-muted-foreground">{task.taskType}</p>
-                      </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        <TrendingUp className="w-3 h-3 text-primary" />
-                        <span className="text-xs font-bold text-primary">{task.priority}</span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+        {/* Main Timer Card */}
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
+          
+          {/* Timer Display */}
+          <div className="text-center mb-8">
+            {/* Session Type Badge */}
+            <div className="mb-4">
+              <span className={`inline-block px-6 py-2 rounded-full font-semibold text-sm ${
+                sessionType === 'work' 
+                  ? 'bg-primary/20 text-primary border-2 border-primary'
+                  : 'bg-green-500/20 text-green-600 border-2 border-green-500'
+              }`}>
+                {sessionType === 'work' ? '🎯 Work Session' : '☕ Break Time'}
+              </span>
+            </div>
 
-              {/* Settings */}
-              <div className="mt-6 pt-6 border-t border-border">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Settings</h3>
+            <div className="relative inline-block">
+              {/* Circular Progress */}
+              <svg className="w-64 h-64 transform -rotate-90">
+                <circle
+                  cx="128"
+                  cy="128"
+                  r="120"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="none"
+                  className="text-secondary"
+                />
+                <circle
+                  cx="128"
+                  cy="128"
+                  r="120"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 120}`}
+                  strokeDashoffset={`${2 * Math.PI * 120 * (1 - progressPercentage / 100)}`}
+                  className={`transition-all duration-1000 ${sessionType === 'work' ? 'text-primary' : 'text-green-500'}`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              
+              {/* Time Text */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-6xl font-bold text-foreground font-mono">
+                    {timeDisplay}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-2">
+                    {status === 'active' ? (sessionType === 'work' ? 'Stay Focused' : 'Take a Break') : status === 'paused' ? 'Paused' : 'Ready'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Duration Selectors */}
+          {status === 'idle' && (
+            <>
+              {/* Work Duration */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Work Duration (minutes)
+                </label>
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Focus Duration</label>
-                    <input
-                      type="number"
-                      value={settings.focusDuration}
-                      onChange={(e) => setSettings({...settings, focusDuration: Number(e.target.value)})}
-                      disabled={status !== 'idle'}
-                      className="w-full mt-1 px-3 py-2 text-sm rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      min="1"
-                      max="60"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Short Break</label>
-                    <input
-                      type="number"
-                      value={settings.shortBreakDuration}
-                      onChange={(e) => setSettings({...settings, shortBreakDuration: Number(e.target.value)})}
-                      disabled={status !== 'idle'}
-                      className="w-full mt-1 px-3 py-2 text-sm rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      min="1"
-                      max="30"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Long Break</label>
-                    <input
-                      type="number"
-                      value={settings.longBreakDuration}
-                      onChange={(e) => setSettings({...settings, longBreakDuration: Number(e.target.value)})}
-                      disabled={status !== 'idle'}
-                      className="w-full mt-1 px-3 py-2 text-sm rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      min="1"
-                      max="60"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Timer Display */}
-          <div className="lg:col-span-2">
-            <div className="bg-card rounded-xl border border-border p-8 shadow-sm hover:shadow-md transition-shadow smooth-transition">
-              {/* Mode Badge */}
-              <div className="flex items-center justify-center mb-6">
-                <span className={`px-4 py-2 rounded-full text-sm font-semibold ${modeInfo.bgColor} ${modeInfo.color}`}>
-                  {modeInfo.label}
-                </span>
-              </div>
-
-              {/* Task Name */}
-              {selectedTask && (
-                <div className="text-center mb-6">
-                  <p className="text-muted-foreground text-sm mb-1">Focusing on:</p>
-                  <h2 className="text-2xl font-bold text-foreground">{selectedTask.name}</h2>
-                </div>
-              )}
-
-              {/* Countdown Timer */}
-              <div className="relative mb-8">
-                <div className="flex items-center justify-center">
-                  <div className="text-8xl font-bold text-foreground tabular-nums">
-                    {formatTime(remainingSeconds)}
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mt-8 w-full h-2 bg-secondary rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-1000 ${
-                      mode === 'focus' ? 'bg-primary' : 
-                      mode === 'short_break' ? 'bg-accent' : 
-                      'bg-blue-500'
-                    }`}
-                    style={{ width: `${progress}%` }}
+                  <input
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={workDuration}
+                    onChange={(e) => {
+                      const newDuration = Math.max(1, Math.min(120, Number(e.target.value)))
+                      setWorkDuration(newDuration)
+                      if (sessionType === 'work') {
+                        setRemainingSeconds(newDuration * 60)
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-center text-xl font-semibold"
                   />
-                </div>
-              </div>
-
-              {/* Session Progress */}
-              <div className="text-center mb-8">
-                <p className="text-sm text-muted-foreground">
-                  Session <span className="font-bold text-foreground">{sessionNumber}</span> of{' '}
-                  <span className="font-bold text-foreground">{settings.sessionsBeforeLongBreak}</span>
-                </p>
-              </div>
-
-              {/* Control Buttons */}
-              <div className="flex items-center justify-center gap-4">
-                {status === 'idle' && (
-                  <button
-                    onClick={startPomodoro}
-                    disabled={!selectedTask}
-                    className="px-8 py-4 bg-gradient-to-r from-primary to-accent hover:shadow-lg text-white font-semibold rounded-lg transition-all duration-200 smooth-transition hover:brightness-110 active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Play className="w-5 h-5" />
-                    Start
-                  </button>
-                )}
-
-                {status === 'active' && (
-                  <button
-                    onClick={pausePomodoro}
-                    className="px-8 py-4 bg-secondary hover:bg-secondary/80 text-foreground font-semibold rounded-lg transition-all smooth-transition active:scale-95 flex items-center gap-2"
-                  >
-                    <Pause className="w-5 h-5" />
-                    Pause
-                  </button>
-                )}
-
-                {status === 'paused' && (
-                  <button
-                    onClick={resumePomodoro}
-                    className="px-8 py-4 bg-gradient-to-r from-primary to-accent hover:shadow-lg text-white font-semibold rounded-lg transition-all duration-200 smooth-transition hover:brightness-110 active:scale-95 flex items-center gap-2"
-                  >
-                    <Play className="w-5 h-5" />
-                    Resume
-                  </button>
-                )}
-
-                {status !== 'idle' && (
-                  <button
-                    onClick={stopPomodoro}
-                    className="px-8 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-600 font-semibold rounded-lg transition-all smooth-transition active:scale-95 flex items-center gap-2"
-                  >
-                    <RotateCcw className="w-5 h-5" />
-                    Reset
-                  </button>
-                )}
-              </div>
-
-              {/* Info Box */}
-              <div className="mt-8 p-4 bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-foreground font-semibold mb-1">
-                      Focus Mode with Browser Reminders
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      When your Pomodoro session ends, you'll receive a browser notification even if you minimize this tab.
-                      The timer will continue running in the background!
-                    </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {[15, 25, 30, 45, 60].map((min) => (
+                      <button
+                        key={min}
+                        onClick={() => {
+                          setWorkDuration(min)
+                          if (sessionType === 'work') {
+                            setRemainingSeconds(min * 60)
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                          workDuration === min
+                            ? 'bg-primary text-foreground shadow-md'
+                            : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                        }`}
+                      >
+                        {min}m
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
-            </div>
+
+              {/* Break Duration */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Break Duration (minutes)
+                </label>
+                <div className="space-y-3">
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={breakDuration}
+                    onChange={(e) => {
+                      const newDuration = Math.max(1, Math.min(30, Number(e.target.value)))
+                      setBreakDuration(newDuration)
+                      if (sessionType === 'break') {
+                        setRemainingSeconds(newDuration * 60)
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-green-500 text-center text-xl font-semibold"
+                  />
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {[3, 5, 10, 15].map((min) => (
+                      <button
+                        key={min}
+                        onClick={() => {
+                          setBreakDuration(min)
+                          if (sessionType === 'break') {
+                            setRemainingSeconds(min * 60)
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                          breakDuration === min
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                        }`}
+                      >
+                        {min}m
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Auto-start break option */}
+              <div className="mb-6">
+                <label className="flex items-center gap-3 cursor-pointer justify-center">
+                  <input
+                    type="checkbox"
+                    checked={autoStartBreak}
+                    onChange={(e) => setAutoStartBreak(e.target.checked)}
+                    className="w-4 h-4 rounded accent-primary"
+                  />
+                  <span className="text-sm text-foreground">Auto-start break after work session</span>
+                </label>
+              </div>
+            </>
+          )}
+
+          {/* Controls */}
+          <div className="flex gap-4 justify-center flex-wrap">
+            {status === 'idle' && (
+              <button
+                onClick={handleStart}
+                className={`flex items-center gap-2 px-8 py-4 font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95 ${
+                  sessionType === 'work'
+                    ? 'bg-gradient-to-r from-primary to-accent text-foreground'
+                    : 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                }`}
+              >
+                <Play className="w-5 h-5" />
+                Start {sessionType === 'work' ? 'Work' : 'Break'}
+              </button>
+            )}
+
+            {status === 'active' && (
+              <button
+                onClick={handlePause}
+                className="flex items-center gap-2 px-8 py-4 bg-yellow-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
+              >
+                <Pause className="w-5 h-5" />
+                Pause
+              </button>
+            )}
+
+            {status === 'paused' && (
+              <button
+                onClick={handleResume}
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-accent text-foreground font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
+              >
+                <Play className="w-5 h-5" />
+                Resume
+              </button>
+            )}
+
+            {status !== 'idle' && (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-2 px-8 py-4 bg-red-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
+              >
+                <RotateCcw className="w-5 h-5" />
+                Reset
+              </button>
+            )}
+
+            {status === 'idle' && (
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="flex items-center gap-2 px-6 py-4 bg-secondary text-foreground font-semibold rounded-lg hover:bg-secondary/80 transition-all"
+              >
+                <SettingsIcon className="w-5 h-5" />
+              </button>
+            )}
           </div>
+
+          {/* Settings Panel */}
+          {showSettings && status === 'idle' && (
+            <div className="mt-6 p-4 bg-secondary/50 rounded-lg border border-border">
+              <h3 className="font-semibold text-foreground mb-4">Timer Settings</h3>
+              
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableSound}
+                    onChange={(e) => setEnableSound(e.target.checked)}
+                    className="w-4 h-4 rounded accent-primary"
+                  />
+                  <span className="text-foreground">Enable completion sound</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoStartBreak}
+                    onChange={(e) => setAutoStartBreak(e.target.checked)}
+                    className="w-4 h-4 rounded accent-primary"
+                  />
+                  <span className="text-foreground">Auto-start break after work</span>
+                </label>
+
+                <button
+                  onClick={requestNotificationPermission}
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground hover:bg-secondary transition-all"
+                >
+                  Enable Browser Notifications
+                </button>
+
+                <button
+                  onClick={saveSettings}
+                  className="w-full px-4 py-3 bg-primary text-foreground font-semibold rounded-lg hover:shadow-lg transition-all"
+                >
+                  Save Settings
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Info Box */}
+        <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-lg p-4">
+          <p className="text-sm text-foreground">
+            <strong>💡 How it works:</strong> Set your work and break durations, then start! 
+            After each work session, the timer will switch to a break session. Complete cycles to stay productive and well-rested.
+          </p>
+        </div>
+
       </div>
     </div>
   )
