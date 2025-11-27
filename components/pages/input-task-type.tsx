@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Brain, CheckCircle, Trash2, Edit, AlertTriangle } from "lucide-react"
+import { Plus, Brain, CheckCircle, Trash2, Edit, AlertTriangle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useState, useEffect } from "react"
 
 interface TaskType {
@@ -13,6 +13,8 @@ interface TaskType {
 export default function InputTaskTypePage() {
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
   const [formData, setFormData] = useState({
     name: "",
     difficulty: 3,
@@ -147,15 +149,15 @@ export default function InputTaskTypePage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
+    <div className="h-[88vh] overflow-hidden p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
       <div className="max-w-6xl mx-auto space-y-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form */}
           <div className="space-y-6">
             {/* Task Type Form */}
-            <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition">
-              <div className="mb-6">
+            <div className="bg-card rounded-xl border border-border p-3 shadow-sm hover:shadow-md transition-shadow smooth-transition">
+              <div className="mb-3">
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <Plus className="w-5 h-5 text-primary" />
                   {editingId ? "Edit Task Type" : "Add New Task Type"}
@@ -165,27 +167,27 @@ export default function InputTaskTypePage() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Task Type Name */}
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-2">
+                  <label className="block text-sm font-semibold text-foreground mb-1">
                     Task Type Name
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g., Quiz, Midterm Exam, Group Project"
+                    placeholder="Practicum report, Reminder, etc."
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
+                    className="w-full px-3 py-1.5 rounded-lg bg-input border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
                     required
                   />
                 </div>
 
                 {/* Difficulty */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                     <label className="text-sm font-semibold text-foreground">Difficulty Level</label>
-                    <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+                    <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                       {formData.difficulty}/5
                     </span>
                   </div>
@@ -205,9 +207,9 @@ export default function InputTaskTypePage() {
 
                 {/* Weight */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                     <label className="text-sm font-semibold text-foreground">Task Weight</label>
-                    <span className="text-sm font-bold text-accent bg-accent/10 px-3 py-1 rounded-full">
+                    <span className="text-sm font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
                       {formData.weight}/10
                     </span>
                   </div>
@@ -229,7 +231,7 @@ export default function InputTaskTypePage() {
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:shadow-lg text-foreground font-semibold py-3 px-4 rounded-lg transition-all duration-200 smooth-transition flex items-center justify-center gap-2 hover:brightness-110 active:scale-95"
+                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:shadow-lg text-foreground font-semibold py-2 px-3 rounded-lg transition-all duration-200 smooth-transition flex items-center justify-center gap-2 hover:brightness-110 active:scale-95"
                   >
                     <Plus className="w-4 h-4" />
                     {editingId ? "Update Task Type" : "Add Task Type"}
@@ -238,7 +240,7 @@ export default function InputTaskTypePage() {
                     <button
                       type="button"
                       onClick={handleCancelEdit}
-                      className="px-4 py-3 bg-secondary text-foreground font-semibold rounded-lg hover:bg-secondary/80 transition-all smooth-transition"
+                      className="px-3 py-2 bg-secondary text-foreground font-semibold rounded-lg hover:bg-secondary/80 transition-all smooth-transition"
                     >
                       Cancel
                     </button>
@@ -260,12 +262,12 @@ export default function InputTaskTypePage() {
             </div>
 
             {/* Info Box */}
-            <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-              <h3 className="font-semibold text-foreground flex items-center gap-2">
-                <Brain className="w-5 h-5 text-primary" />
+            <div className="bg-card rounded-xl border border-border p-3 space-y-2">
+              <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
+                <Brain className="w-4 h-4 text-primary" />
                 About Difficulty & Weight
               </h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
+              <ul className="space-y-1.5 text-xs text-muted-foreground">
                 <li className="flex gap-2">
                   <span className="text-primary font-bold">•</span>
                   <span><strong>Difficulty:</strong> Represents task complexity (1=Easy, 5=Hard)</span>
@@ -284,24 +286,23 @@ export default function InputTaskTypePage() {
 
           {/* Right Column - Task Types List */}
           <div className="space-y-6">
-            <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition">
-              <div className="mb-6">
+            <div className="bg-card rounded-xl border border-border p-3.5 shadow-sm hover:shadow-md transition-shadow smooth-transition">
+              <div className="mb-3.5">
                 <h2 className="text-lg font-bold text-foreground">Task Types</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   Manage your task type templates
                 </p>
               </div>
 
-              <div className="space-y-3">
-                {taskTypes.map((taskType) => (
+              <div className="space-y-4">
+                {taskTypes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((taskType) => (
                   <div
                     key={taskType.id}
-                    className="bg-secondary/30 border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors smooth-transition"
-                  >
+                    className="bg-secondary/30 border border-border rounded-lg p-2 hover:bg-secondary/50 transition-colors smooth-transition">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-2">{taskType.name}</h3>
-                        <div className="flex gap-4 text-sm">
+                        <h3 className="font-semibold text-foreground mb-1.5 text-sm">{taskType.name}</h3>
+                        <div className="flex gap-4 text-xs">
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">Difficulty:</span>
                             <div className="flex gap-1">
@@ -337,6 +338,49 @@ export default function InputTaskTypePage() {
                   </div>
                 ))}
               </div>
+
+              {/* Pagination Controls */}
+              {Math.ceil(taskTypes.length / itemsPerPage) > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-3 mt-3 border-t border-border">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-lg hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="First page"
+                  >
+                    <ChevronsLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-lg hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  
+                  <div className="px-3 py-0.5 rounded-lg bg-secondary text-foreground text-xs font-medium">
+                    {currentPage}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(taskTypes.length / itemsPerPage), prev + 1))}
+                    disabled={currentPage === Math.ceil(taskTypes.length / itemsPerPage)}
+                    className="p-1.5 rounded-lg hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(Math.ceil(taskTypes.length / itemsPerPage))}
+                    disabled={currentPage === Math.ceil(taskTypes.length / itemsPerPage)}
+                    className="p-1.5 rounded-lg hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Last page"
+                  >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
