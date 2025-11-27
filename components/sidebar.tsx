@@ -1,8 +1,9 @@
 "use client"
 
-import { LayoutDashboard, Plus, List, Brain, Settings, Info, Sparkles, Zap, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
+import { LayoutDashboard, Plus, List, Brain, Info, Sparkles, Zap, LogOut, ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useTheme } from "next-themes"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,13 +27,18 @@ const menuItems = [
   { id: "tasks", label: "Task List", icon: List },
   { id: "input", label: "Input Task Type", icon: Plus },
   { id: "results", label: "Focus Mode", icon: Brain },
-  { id: "settings", label: "Settings", icon: Settings },
   { id: "about", label: "About", icon: Info },
 ]
 
 export default function Sidebar({ open, currentPage, onNavigate, onToggle }: SidebarProps) {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   function handleLogout() {
     localStorage.removeItem("user")
@@ -101,7 +107,23 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          {/* Theme Toggle */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className={`w-full flex items-center ${open ? 'gap-3 px-4' : 'justify-center px-3'} py-3 rounded-lg text-foreground hover:bg-secondary hover:shadow-sm transition-all duration-200 smooth-transition`}
+              title={!open ? (theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode") : undefined}
+            >
+              {theme === "dark" ? (
+                <Moon className="w-5 h-5 flex-shrink-0" />
+              ) : (
+                <Sun className="w-5 h-5 flex-shrink-0" />
+              )}
+              {open && <span className="font-medium text-sm">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>}
+            </button>
+          )}
+          
           {/* Logout Button */}
           <button
             onClick={() => setShowLogoutDialog(true)}

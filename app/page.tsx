@@ -8,7 +8,6 @@ import Dashboard from "@/components/dashboard"
 import InputTaskPage from "@/components/pages/input-task-type"
 import TaskListPage from "@/components/pages/task-list"
 import MLResultsPage from "@/components/pages/focus-mode"
-import SettingsPage from "@/components/pages/settings"
 import AboutPage from "@/components/pages/about"
 
 export default function Home() {
@@ -49,7 +48,6 @@ export default function Home() {
           {currentPage === "input" && <InputTaskPage />}
           {currentPage === "tasks" && <TaskListPage />}
           {currentPage === "results" && <MLResultsPage />}
-          {currentPage === "settings" && <SettingsPage />}
           {currentPage === "about" && <AboutPage />}
         </main>
       </div>
