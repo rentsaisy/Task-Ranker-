@@ -320,7 +320,7 @@ export default function FocusModePage() {
   const progressPercentage = ((currentDuration * 60 - remainingSeconds) / (currentDuration * 60)) * 100
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background">
+    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
       <div className="max-w-4xl mx-auto space-y-8">
         
         {/* Header */}
