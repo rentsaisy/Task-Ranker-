@@ -1,19 +1,8 @@
 "use client"
 
-import { LayoutDashboard, Plus, List, Brain, Info, Sparkles, Zap, LogOut, ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { LayoutDashboard, Plus, List, Brain, Info, Sparkles, Zap, ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 
 interface SidebarProps {
   open: boolean
@@ -31,19 +20,12 @@ const menuItems = [
 ]
 
 export default function Sidebar({ open, currentPage, onNavigate, onToggle }: SidebarProps) {
-  const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
-  
-  function handleLogout() {
-    localStorage.removeItem("user")
-    router.push("/login")
-  }
   
   return (
     <>
@@ -123,39 +105,8 @@ export default function Sidebar({ open, currentPage, onNavigate, onToggle }: Sid
               {open && <span className="font-medium text-sm">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>}
             </button>
           )}
-          
-          {/* Logout Button */}
-          <button
-            onClick={() => setShowLogoutDialog(true)}
-            className={`w-full flex items-center ${open ? 'gap-3 px-4' : 'justify-center px-3'} py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:shadow-sm transition-all duration-200 smooth-transition`}
-            title={!open ? "Logout" : undefined}
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            {open && <span className="font-medium text-sm">Logout</span>}
-          </button>
         </div>
       </aside>
-
-      {/* Logout Confirmation Dialog */}
-      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You will be redirected to the login page and will need to sign in again to access your tasks.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Logout
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }

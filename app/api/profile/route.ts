@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId') || '1'
     
     const [rows]: any = await pool.query(
-      'SELECT id, name, email FROM users WHERE id = ?',
+      'SELECT id, name, email, image FROM users WHERE id = ?',
       [userId]
     )
     

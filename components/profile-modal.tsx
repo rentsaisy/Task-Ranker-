@@ -6,11 +6,16 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar } from "@/components/ui/avatar"
-import { Upload, Trash2, User } from "lucide-react"
+import { Upload, Trash2, User, Camera, Pencil, ImagePlus } from "lucide-react"
 
-export default function ProfileModal({ children }: { children: React.ReactNode }) {
+export default function ProfileModal({ children, open, onOpenChange }: { 
+  children?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void 
+}) {
   const [name, setName] = useState<string>("")
   const [preview, setPreview] = useState<string | null>(null)
+  const [showMenu, setShowMenu] = useState(false)
 
   useEffect(() => {
     // Get user from localStorage
@@ -101,15 +106,24 @@ export default function ProfileModal({ children }: { children: React.ReactNode }
     }
   }
 
-  function handleDeletePicture() {
+  function handleDeletePicture(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
     setPreview(null)
+    setShowMenu(false)
+  }
+
+  function handleFileClick() {
+    setShowMenu(false)
   }
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {children && (
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Profile</DialogTitle>
@@ -128,32 +142,46 @@ export default function ProfileModal({ children }: { children: React.ReactNode }
                   </div>
                 )}
               </Avatar>
-              {preview && (
-                <button
-                  onClick={handleDeletePicture}
-                  className="absolute -top-1 -right-1 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md transition-colors"
-                  title="Delete profile picture"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              
+              {/* Pencil Icon Button */}
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-primary hover:bg-accent text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
+                title="Edit profile picture"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {showMenu && (
+                <div className="absolute top-full right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <label className="flex items-center gap-3 px-4 py-3 hover:bg-secondary hover:scale-[1.02] cursor-pointer transition-all duration-150 relative">
+                    <ImagePlus className="w-4 h-4 text-primary transition-transform group-hover:scale-110" />
+                    <span className="text-sm text-foreground">Change Picture</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => { handleFile(e); handleFileClick(); }} 
+                      className="hidden" 
+                    />
+                  </label>
+                  {preview && (
+                    <button
+                      onClick={handleDeletePicture}
+                      type="button"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/20 hover:scale-[1.02] transition-all duration-150 text-left"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500 transition-transform hover:scale-110" />
+                      <span className="text-sm text-foreground hover:text-red-600 transition-colors">Delete Picture</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             <div className="w-full">
               <label className="text-xs text-muted-foreground block mb-1">Display name</label>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
             </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-muted-foreground block mb-2">Profile picture</label>
-            <div className="relative">
-              <label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
-                <Upload className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">Choose file</span>
-                <input type="file" accept="image/*" onChange={handleFile} className="absolute inset-0 opacity-0 cursor-pointer" />
-              </label>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">Upload an image to personalize your avatar. Changes are stored locally.</p>
           </div>
         </div>
 
