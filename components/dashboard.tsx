@@ -71,11 +71,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="h-[88vh] overflow-hidden p-3 md:p-6 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
+      <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <StatCard
             title="Total Tasks"
             value={tasks.length.toString()}
@@ -100,17 +100,17 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Form */}
           <div className="lg:col-span-1">
             <TaskForm onAddTask={handleAddTask} />
           </div>  
 
           {/* Right Column */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6">
             {/* Priority Table */}
-            <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow smooth-transition">
+              <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Ranking</h2>
                   <p className="text-sm text-muted-foreground">Finish it before it finish u</p>
@@ -136,7 +136,7 @@ interface StatCardProps {
 function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
   return (
     <div
-      className={`bg-gradient-to-br ${color} border border-border rounded-xl p-6 smooth-transition hover:shadow-md hover:border-primary/30`}
+      className={`bg-gradient-to-br ${color} border border-border rounded-xl p-5 smooth-transition hover:shadow-md hover:border-primary/30`}
     >
       <div className="flex items-center justify-between">
         <div>

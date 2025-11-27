@@ -95,7 +95,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
   }
 
   return (
-    <div className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow smooth-transition h-fit">
+    <div className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow smooth-transition h-fit">
       
       {/* Alert Popup */}
       {showAlert && (
@@ -114,7 +114,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Task Name */}
         <div>
           <label className="block text-sm font-semibold text-foreground mb-2">Task Name</label>
@@ -123,7 +123,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
             placeholder="Project or subject title, etc."
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-input border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
           />
         </div>
 
@@ -133,7 +133,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
           <select
             value={formData.task_type_id}
             onChange={(e) => setFormData({ ...formData, task_type_id: e.target.value })}
-            className="w-full px-4 py-2.5 pr-8 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat [background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%2716%27%20height=%2716%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23000000%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpolyline%20points=%276%209%2012%2015%2018%209%27%3E%3C/polyline%3E%3C/svg%3E')] dark:[background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%2716%27%20height=%2716%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23ffffff%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpolyline%20points=%276%209%2012%2015%2018%209%27%3E%3C/polyline%3E%3C/svg%3E')]"
+            className="w-full px-3.5 py-2.5 pr-8 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat [background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%2716%27%20height=%2716%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23000000%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpolyline%20points=%276%209%2012%2015%2018%209%27%3E%3C/polyline%3E%3C/svg%3E')] dark:[background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%2716%27%20height=%2716%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%23ffffff%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpolyline%20points=%276%209%2012%2015%2018%209%27%3E%3C/polyline%3E%3C/svg%3E')]"
             disabled={loading || taskTypes.length === 0}
           >
             {loading ? (
@@ -157,12 +157,12 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
         <div>
           <label className="block text-sm font-semibold text-foreground mb-2">Deadline</label>
           <div className="relative">
-            <Calendar className="absolute left-3 top-3 w-5 h-5 text-muted-foreground pointer-events-none" />
+            <Calendar className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground pointer-events-none" />
             <input
               type="date"
               value={formData.deadline}
               onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
+              className="w-full pl-10 pr-3.5 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
             />
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-primary to-accent hover:shadow-lg text-foreground font-semibold py-3 px-4 rounded-lg transition-all duration-200 smooth-transition flex items-center justify-center gap-2 mt-6 hover:brightness-110 active:scale-95"
+          className="w-full bg-gradient-to-r from-primary to-accent hover:shadow-lg text-foreground font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 smooth-transition flex items-center justify-center gap-2 mt-5 hover:brightness-110 active:scale-95"
         >
           <Sparkles className="w-4 h-4" />
           Generate Priority
