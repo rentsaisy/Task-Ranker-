@@ -1,19 +1,19 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Play, Pause, RotateCcw, Clock, Timer, CheckCircle, Settings as SettingsIcon } from "lucide-react"
+import { Play, Pause, RotateCcw, Clock, Timer, CheckCircle, Settings as SettingsIcon, ChevronUp, ChevronDown } from "lucide-react"
 
 type TimerStatus = 'idle' | 'active' | 'paused'
 type SessionType = 'work' | 'break'
 
 export default function FocusModePage() {
   // Timer state
-  const [workDuration, setWorkDuration] = useState(25) // minutes
-  const [breakDuration, setBreakDuration] = useState(5) // minutes
+  const [workDurationSeconds, setWorkDurationSeconds] = useState(1 * 60) // seconds
+  const [breakDurationSeconds, setBreakDurationSeconds] = useState(1 * 60) // seconds
   const [status, setStatus] = useState<TimerStatus>('idle')
   const [sessionType, setSessionType] = useState<SessionType>('work')
-  const [remainingSeconds, setRemainingSeconds] = useState(25 * 60)
-  const [autoStartBreak, setAutoStartBreak] = useState(false)
+  const [remainingSeconds, setRemainingSeconds] = useState(1 * 60)
+  const [repeating, setRepeating] = useState(false)
   
   // Session tracking
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null)
@@ -36,15 +36,50 @@ export default function FocusModePage() {
     loadSettings()
     loadTodayStats()
     
-    // Try to initialize alarm audio
-    if (typeof Audio !== 'undefined') {
-      alarmAudioRef.current = new Audio('/alarm.mp3')
+    // Initialize alarm audio on user interaction
+    const initAudio = () => {
+      if (!alarmAudioRef.current && typeof Audio !== 'undefined') {
+        try {
+          const audio = new Audio('/alarm.mp3')
+          audio.volume = 0.5
+          
+          audio.addEventListener('loadeddata', () => {
+            console.log('Alarm audio loaded successfully')
+            // Limit to 10 seconds
+            audio.addEventListener('timeupdate', () => {
+              if (audio.currentTime >= 10) {
+                audio.pause()
+                audio.currentTime = 0
+              }
+            })
+          })
+          
+          audio.addEventListener('error', (e) => {
+            console.warn('Could not load alarm audio')
+          })
+          
+          alarmAudioRef.current = audio
+        } catch (error) {
+          console.warn('Audio not supported')
+        }
+      }
     }
+    
+    // Initialize on mount
+    initAudio()
+    
+    // Also try to initialize on first user click
+    const handleFirstClick = () => {
+      initAudio()
+      document.removeEventListener('click', handleFirstClick)
+    }
+    document.addEventListener('click', handleFirstClick)
     
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current)
       }
+      document.removeEventListener('click', handleFirstClick)
     }
   }, [])
 
@@ -76,10 +111,10 @@ export default function FocusModePage() {
   // Update remaining seconds when duration changes
   useEffect(() => {
     if (status === 'idle') {
-      const currentDuration = sessionType === 'work' ? workDuration : breakDuration
-      setRemainingSeconds(currentDuration * 60)
+      const currentDuration = sessionType === 'work' ? workDurationSeconds : breakDurationSeconds
+      setRemainingSeconds(currentDuration)
     }
-  }, [workDuration, breakDuration, sessionType, status])
+  }, [workDurationSeconds, breakDurationSeconds, sessionType, status])
 
   /**
    * Load user settings
@@ -89,8 +124,9 @@ export default function FocusModePage() {
       const response = await fetch(`/api/pomodoro/settings?userId=${userId}`)
       if (response.ok) {
         const data = await response.json()
-        if (data.default_duration) {
-          setWorkDuration(data.default_duration)
+        // Only load if settings exist, otherwise keep default 1 minute
+        if (data.default_duration && data.default_duration !== 25) {
+          setWorkDurationSeconds(data.default_duration * 60)
           setRemainingSeconds(data.default_duration * 60)
         }
         if (typeof data.enable_sound === 'boolean') {
@@ -128,7 +164,7 @@ export default function FocusModePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          default_duration: workDuration,
+          default_duration: Math.floor(workDurationSeconds / 60),
           enable_sound: enableSound,
         }),
       })
@@ -142,7 +178,7 @@ export default function FocusModePage() {
    * Start timer
    */
   async function handleStart() {
-    const currentDuration = sessionType === 'work' ? workDuration : breakDuration
+    const currentDuration = sessionType === 'work' ? workDurationSeconds : breakDurationSeconds
     
     try {
       const response = await fetch('/api/pomodoro/start', {
@@ -151,7 +187,7 @@ export default function FocusModePage() {
         body: JSON.stringify({
           userId,
           taskId: null,
-          duration: currentDuration,
+          duration: Math.floor(currentDuration / 60),
         }),
       })
 
@@ -232,8 +268,8 @@ export default function FocusModePage() {
 
     setStatus('idle')
     setSessionType('work')
-    const currentDuration = workDuration
-    setRemainingSeconds(currentDuration * 60)
+    const currentDuration = workDurationSeconds
+    setRemainingSeconds(currentDuration)
     setCurrentSessionId(null)
   }
 
@@ -243,7 +279,7 @@ export default function FocusModePage() {
   async function handleTimerComplete() {
     setStatus('idle')
     
-    const currentDuration = sessionType === 'work' ? workDuration : breakDuration
+    const currentDuration = sessionType === 'work' ? workDurationSeconds : breakDurationSeconds
 
     // Play alarm sound
     if (enableSound && alarmAudioRef.current) {
@@ -257,8 +293,8 @@ export default function FocusModePage() {
     // Show browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
       const message = sessionType === 'work' 
-        ? `Work session complete! Time for a ${breakDuration} minute break.`
-        : `Break is over! Ready for another ${workDuration} minute work session?`
+        ? `Work session complete! Time for a ${Math.floor(breakDurationSeconds / 60)} minute break.`
+        : `Break is over! Ready for another ${Math.floor(workDurationSeconds / 60)} minute work session?`
       
       new Notification(sessionType === 'work' ? 'Work Complete! 🎉' : 'Break Over! ⚡', {
         body: message,
@@ -289,17 +325,74 @@ export default function FocusModePage() {
     // Switch between work and break
     if (sessionType === 'work') {
       setSessionType('break')
-      setRemainingSeconds(breakDuration * 60)
+      setRemainingSeconds(breakDurationSeconds)
       
-      // Auto-start break if enabled
-      if (autoStartBreak) {
-        setTimeout(() => {
-          handleStart()
-        }, 2000)
+      // Play alarm sound when switching to break
+      if (enableSound && alarmAudioRef.current) {
+        try {
+          alarmAudioRef.current.currentTime = 0
+          alarmAudioRef.current.play()
+        } catch (error) {
+          console.error('Error playing alarm:', error)
+        }
+      }
+      
+      // Auto-start break if repeating enabled - start immediately without idle state
+      if (repeating) {
+        // Start break session immediately
+        setTimeout(async () => {
+          const response = await fetch('/api/pomodoro/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              taskId: null,
+              duration: Math.floor(breakDurationSeconds / 60),
+            }),
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            setCurrentSessionId(data.sessionId)
+            setStatus('active')
+          }
+        }, 1000)
       }
     } else {
       setSessionType('work')
-      setRemainingSeconds(workDuration * 60)
+      setRemainingSeconds(workDurationSeconds)
+      
+      // Play alarm sound when switching to work
+      if (enableSound && alarmAudioRef.current) {
+        try {
+          alarmAudioRef.current.currentTime = 0
+          alarmAudioRef.current.play()
+        } catch (error) {
+          console.error('Error playing alarm:', error)
+        }
+      }
+      
+      // Auto-start work if repeating enabled - start immediately without idle state
+      if (repeating) {
+        // Start work session immediately
+        setTimeout(async () => {
+          const response = await fetch('/api/pomodoro/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              taskId: null,
+              duration: Math.floor(workDurationSeconds / 60),
+            }),
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            setCurrentSessionId(data.sessionId)
+            setStatus('active')
+          }
+        }, 1000)
+      }
     }
   }
 
@@ -313,225 +406,362 @@ export default function FocusModePage() {
   }
 
   // Format time display
-  const minutes = Math.floor(remainingSeconds / 60)
+  const hours = Math.floor(remainingSeconds / 3600)
+  const minutes = Math.floor((remainingSeconds % 3600) / 60)
   const seconds = remainingSeconds % 60
-  const timeDisplay = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  const currentDuration = sessionType === 'work' ? workDuration : breakDuration
-  const progressPercentage = ((currentDuration * 60 - remainingSeconds) / (currentDuration * 60)) * 100
+  const timeDisplay = hours > 0 
+    ? `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    : `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  const currentDuration = sessionType === 'work' ? workDurationSeconds : breakDurationSeconds
+  const progressPercentage = ((currentDuration - remainingSeconds) / currentDuration) * 100
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center justify-center gap-3">
-            <Timer className="w-8 h-8 text-primary" />
-            Pomodoro Timer
-          </h1>
-          <p className="text-muted-foreground">
-            Work focused, rest well - stay productive!
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Completed Today</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{completedToday}</p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Minutes Today</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{totalMinutesToday}</p>
-          </div>
-        </div>
+    <div className="p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg" style={{ height: '88vh' }}>
+      <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Main Timer Card */}
         <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
           
-          {/* Timer Display */}
-          <div className="text-center mb-8">
-            {/* Session Type Badge */}
-            <div className="mb-4">
-              <span className={`inline-block px-6 py-2 rounded-full font-semibold text-sm ${
-                sessionType === 'work' 
-                  ? 'bg-primary/20 text-primary border-2 border-primary'
-                  : 'bg-green-500/20 text-green-600 border-2 border-green-500'
-              }`}>
-                {sessionType === 'work' ? '🎯 Work Session' : '☕ Break Time'}
-              </span>
-            </div>
-
-            <div className="relative inline-block">
-              {/* Circular Progress */}
-              <svg className="w-64 h-64 transform -rotate-90">
-                <circle
-                  cx="128"
-                  cy="128"
-                  r="120"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="none"
-                  className="text-secondary"
-                />
-                <circle
-                  cx="128"
-                  cy="128"
-                  r="120"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="none"
-                  strokeDasharray={`${2 * Math.PI * 120}`}
-                  strokeDashoffset={`${2 * Math.PI * 120 * (1 - progressPercentage / 100)}`}
-                  className={`transition-all duration-1000 ${sessionType === 'work' ? 'text-primary' : 'text-green-500'}`}
-                  strokeLinecap="round"
-                />
-              </svg>
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Left: Timer Display */}
+            <div className="text-center">
+              <div className="relative inline-block">
+                {/* Circular Progress */}
+                  <svg className="w-72 h-72 transform -rotate-90">
+                    <circle
+                      cx="144"
+                      cy="144"
+                      r="136"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      className="text-secondary"
+                    />
+                    <circle
+                      cx="144"
+                      cy="144"
+                      r="136"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 136}`}
+                      strokeDashoffset={`${2 * Math.PI * 136 * (1 - progressPercentage / 100)}`}
+                      className={`transition-all duration-1000 ${sessionType === 'work' ? 'text-primary' : 'text-green-500'}`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  
+                  {/* Time Text */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      {/* Session Type Badge */}
+                      <span className={`inline-block px-4 py-1.5 rounded-full font-semibold text-xs mb-3 ${
+                        sessionType === 'work' 
+                          ? 'bg-primary/20 text-primary border-2 border-primary'
+                          : 'bg-green-500/20 text-green-600 border-2 border-green-500'
+                      }`}>
+                        {sessionType === 'work' ? 'Work Session' : 'Break Session'}
+                      </span>
+                      <div className="text-5xl font-bold text-foreground font-mono">
+                        {timeDisplay}
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-2">
+                        {status === 'active' ? (sessionType === 'work' ? 'Focus' : 'Rest') : status === 'paused' ? 'Paused' : 'Ready'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               
-              {/* Time Text */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-foreground font-mono">
-                    {timeDisplay}
+              {/* Stats Card Below Timer */}
+              <div className="mt-4">
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 justify-center mb-1">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span className="text-xs text-muted-foreground">Total Hours Today</span>
                   </div>
-                  <div className="text-sm text-muted-foreground mt-2">
-                    {status === 'active' ? (sessionType === 'work' ? 'Stay Focused' : 'Take a Break') : status === 'paused' ? 'Paused' : 'Ready'}
-                  </div>
+                  <p className="text-xl font-bold text-foreground text-center">{totalMinutesToday > 0 ? (totalMinutesToday / 60).toFixed(2) : '-'}</p>
                 </div>
               </div>
             </div>
+
+            {/* Right: Duration Selectors or Animation */}
+            {status === 'idle' && (
+              <div className="space-y-5">
+                {/* Work Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Work Session
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 px-4 py-2 rounded-lg bg-input border border-border text-foreground text-center text-lg font-semibold font-mono">
+                        {workDurationSeconds >= 3600
+                          ? `${Math.floor(workDurationSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((workDurationSeconds % 3600) / 60).toString().padStart(2, '0')}:${(workDurationSeconds % 60).toString().padStart(2, '0')}`
+                          : `${Math.floor(workDurationSeconds / 60).toString().padStart(2, '0')}:${(workDurationSeconds % 60).toString().padStart(2, '0')}`
+                        }
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={() => {
+                            const newSeconds = Math.min(28800, workDurationSeconds + 1)
+                            setWorkDurationSeconds(newSeconds)
+                            if (sessionType === 'work') {
+                              setRemainingSeconds(newSeconds)
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            let timeout = setTimeout(() => {
+                              const interval = setInterval(() => {
+                                setWorkDurationSeconds(prev => {
+                                  const updated = Math.min(28800, prev + 1)
+                                  if (sessionType === 'work') {
+                                    setRemainingSeconds(updated)
+                                  }
+                                  return updated
+                                })
+                              }, 100)
+                              const handleMouseUp = () => {
+                                clearInterval(interval)
+                                document.removeEventListener('mouseup', handleMouseUp)
+                              }
+                              document.addEventListener('mouseup', handleMouseUp)
+                            }, 500)
+                            const handleMouseUp = () => {
+                              clearTimeout(timeout)
+                              document.removeEventListener('mouseup', handleMouseUp)
+                            }
+                            document.addEventListener('mouseup', handleMouseUp)
+                          }}
+                          className="px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-foreground font-bold transition-all text-sm"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const newSeconds = Math.max(60, workDurationSeconds - 1)
+                            setWorkDurationSeconds(newSeconds)
+                            if (sessionType === 'work') {
+                              setRemainingSeconds(newSeconds)
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            let timeout = setTimeout(() => {
+                              const interval = setInterval(() => {
+                                setWorkDurationSeconds(prev => {
+                                  const updated = Math.max(60, prev - 1)
+                                  if (sessionType === 'work') {
+                                    setRemainingSeconds(updated)
+                                  }
+                                  return updated
+                                })
+                              }, 100)
+                              const handleMouseUp = () => {
+                                clearInterval(interval)
+                                document.removeEventListener('mouseup', handleMouseUp)
+                              }
+                              document.addEventListener('mouseup', handleMouseUp)
+                            }, 500)
+                            const handleMouseUp = () => {
+                              clearTimeout(timeout)
+                              document.removeEventListener('mouseup', handleMouseUp)
+                            }
+                            document.addEventListener('mouseup', handleMouseUp)
+                          }}
+                          className="px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-foreground font-bold transition-all text-sm"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[15, 25, 30, 45, 60, 90, 120].map((min) => (
+                        <button
+                          key={min}
+                          onClick={() => {
+                            setWorkDurationSeconds(min * 60)
+                            if (sessionType === 'work') {
+                              setRemainingSeconds(min * 60)
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                            workDurationSeconds === min * 60
+                              ? 'bg-primary text-foreground shadow-md'
+                              : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                          }`}
+                        >
+                          {min >= 60 ? `${min / 60}h` : `${min}m`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Break Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Break Session
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 px-4 py-2 rounded-lg bg-input border border-border text-foreground text-center text-lg font-semibold font-mono">
+                        {breakDurationSeconds >= 3600
+                          ? `${Math.floor(breakDurationSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((breakDurationSeconds % 3600) / 60).toString().padStart(2, '0')}:${(breakDurationSeconds % 60).toString().padStart(2, '0')}`
+                          : `${Math.floor(breakDurationSeconds / 60).toString().padStart(2, '0')}:${(breakDurationSeconds % 60).toString().padStart(2, '0')}`
+                        }
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={() => {
+                            const newSeconds = Math.min(3600, breakDurationSeconds + 1)
+                            setBreakDurationSeconds(newSeconds)
+                            if (sessionType === 'break') {
+                              setRemainingSeconds(newSeconds)
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            let timeout = setTimeout(() => {
+                              const interval = setInterval(() => {
+                                setBreakDurationSeconds(prev => {
+                                  const updated = Math.min(3600, prev + 1)
+                                  if (sessionType === 'break') {
+                                    setRemainingSeconds(updated)
+                                  }
+                                  return updated
+                                })
+                              }, 100)
+                              const handleMouseUp = () => {
+                                clearInterval(interval)
+                                document.removeEventListener('mouseup', handleMouseUp)
+                              }
+                              document.addEventListener('mouseup', handleMouseUp)
+                            }, 500)
+                            const handleMouseUp = () => {
+                              clearTimeout(timeout)
+                              document.removeEventListener('mouseup', handleMouseUp)
+                            }
+                            document.addEventListener('mouseup', handleMouseUp)
+                          }}
+                          className="px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-foreground font-bold transition-all text-sm"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const newSeconds = Math.max(60, breakDurationSeconds - 1)
+                            setBreakDurationSeconds(newSeconds)
+                            if (sessionType === 'break') {
+                              setRemainingSeconds(newSeconds)
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            let timeout = setTimeout(() => {
+                              const interval = setInterval(() => {
+                                setBreakDurationSeconds(prev => {
+                                  const updated = Math.max(60, prev - 1)
+                                  if (sessionType === 'break') {
+                                    setRemainingSeconds(updated)
+                                  }
+                                  return updated
+                                })
+                              }, 100)
+                              const handleMouseUp = () => {
+                                clearInterval(interval)
+                                document.removeEventListener('mouseup', handleMouseUp)
+                              }
+                              document.addEventListener('mouseup', handleMouseUp)
+                            }, 500)
+                            const handleMouseUp = () => {
+                              clearTimeout(timeout)
+                              document.removeEventListener('mouseup', handleMouseUp)
+                            }
+                            document.addEventListener('mouseup', handleMouseUp)
+                          }}
+                          className="px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-foreground font-bold transition-all text-sm"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[3, 5, 10, 15, 20, 30].map((min) => (
+                        <button
+                          key={min}
+                          onClick={() => {
+                            setBreakDurationSeconds(min * 60)
+                            if (sessionType === 'break') {
+                              setRemainingSeconds(min * 60)
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                            breakDurationSeconds === min * 60
+                              ? 'bg-green-500 text-white shadow-md'
+                              : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                          }`}
+                        >
+                          {min}m
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Repeating mode option */}
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={repeating}
+                      onChange={(e) => setRepeating(e.target.checked)}
+                      className="w-4 h-4 rounded accent-primary"
+                    />
+                    <span className="text-sm text-foreground">Repeating</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableSound}
+                      onChange={(e) => setEnableSound(e.target.checked)}
+                      className="w-4 h-4 rounded accent-primary"
+                    />
+                    <span className="text-sm text-foreground">Completion sound</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Right: Animation GIF - shown when session is active */}
+            {status === 'active' && (
+              <div className="flex items-center justify-center">
+                <img 
+                  src={sessionType === 'work' ? '/work-animation.gif' : '/break-animation.gif'} 
+                  alt={sessionType === 'work' ? 'Work animation' : 'Break animation'}
+                  className="w-80 h-80 object-contain rounded-lg"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Duration Selectors */}
-          {status === 'idle' && (
-            <>
-              {/* Work Duration */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Work Duration (minutes)
-                </label>
-                <div className="space-y-3">
-                  <input
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={workDuration}
-                    onChange={(e) => {
-                      const newDuration = Math.max(1, Math.min(120, Number(e.target.value)))
-                      setWorkDuration(newDuration)
-                      if (sessionType === 'work') {
-                        setRemainingSeconds(newDuration * 60)
-                      }
-                    }}
-                    className="w-full px-4 py-3 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-center text-xl font-semibold"
-                  />
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {[15, 25, 30, 45, 60].map((min) => (
-                      <button
-                        key={min}
-                        onClick={() => {
-                          setWorkDuration(min)
-                          if (sessionType === 'work') {
-                            setRemainingSeconds(min * 60)
-                          }
-                        }}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                          workDuration === min
-                            ? 'bg-primary text-foreground shadow-md'
-                            : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
-                        }`}
-                      >
-                        {min}m
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Break Duration */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Break Duration (minutes)
-                </label>
-                <div className="space-y-3">
-                  <input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={breakDuration}
-                    onChange={(e) => {
-                      const newDuration = Math.max(1, Math.min(30, Number(e.target.value)))
-                      setBreakDuration(newDuration)
-                      if (sessionType === 'break') {
-                        setRemainingSeconds(newDuration * 60)
-                      }
-                    }}
-                    className="w-full px-4 py-3 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-green-500 text-center text-xl font-semibold"
-                  />
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {[3, 5, 10, 15].map((min) => (
-                      <button
-                        key={min}
-                        onClick={() => {
-                          setBreakDuration(min)
-                          if (sessionType === 'break') {
-                            setRemainingSeconds(min * 60)
-                          }
-                        }}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                          breakDuration === min
-                            ? 'bg-green-500 text-white shadow-md'
-                            : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
-                        }`}
-                      >
-                        {min}m
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Auto-start break option */}
-              <div className="mb-6">
-                <label className="flex items-center gap-3 cursor-pointer justify-center">
-                  <input
-                    type="checkbox"
-                    checked={autoStartBreak}
-                    onChange={(e) => setAutoStartBreak(e.target.checked)}
-                    className="w-4 h-4 rounded accent-primary"
-                  />
-                  <span className="text-sm text-foreground">Auto-start break after work session</span>
-                </label>
-              </div>
-            </>
-          )}
-
           {/* Controls */}
-          <div className="flex gap-4 justify-center flex-wrap">
+          <div className="flex gap-3 justify-center flex-wrap mt-6">
             {status === 'idle' && (
               <button
                 onClick={handleStart}
-                className={`flex items-center gap-2 px-8 py-4 font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95 ${
+                className={`flex items-center gap-2 px-6 py-3 text-base font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95 ${
                   sessionType === 'work'
                     ? 'bg-gradient-to-r from-primary to-accent text-foreground'
                     : 'bg-gradient-to-r from-green-500 to-green-600 text-white'
                 }`}
               >
                 <Play className="w-5 h-5" />
-                Start {sessionType === 'work' ? 'Work' : 'Break'}
+                Start
               </button>
             )}
 
             {status === 'active' && (
               <button
                 onClick={handlePause}
-                className="flex items-center gap-2 px-8 py-4 bg-yellow-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
+                className="flex items-center gap-2 px-6 py-3 text-base bg-yellow-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
               >
                 <Pause className="w-5 h-5" />
                 Pause
@@ -541,7 +771,7 @@ export default function FocusModePage() {
             {status === 'paused' && (
               <button
                 onClick={handleResume}
-                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-accent text-foreground font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
+                className="flex items-center gap-2 px-6 py-3 text-base bg-gradient-to-r from-primary to-accent text-foreground font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
               >
                 <Play className="w-5 h-5" />
                 Resume
@@ -551,73 +781,13 @@ export default function FocusModePage() {
             {status !== 'idle' && (
               <button
                 onClick={handleReset}
-                className="flex items-center gap-2 px-8 py-4 bg-red-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
+                className="flex items-center gap-2 px-6 py-3 text-base bg-red-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all active:scale-95"
               >
                 <RotateCcw className="w-5 h-5" />
                 Reset
               </button>
             )}
-
-            {status === 'idle' && (
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center gap-2 px-6 py-4 bg-secondary text-foreground font-semibold rounded-lg hover:bg-secondary/80 transition-all"
-              >
-                <SettingsIcon className="w-5 h-5" />
-              </button>
-            )}
           </div>
-
-          {/* Settings Panel */}
-          {showSettings && status === 'idle' && (
-            <div className="mt-6 p-4 bg-secondary/50 rounded-lg border border-border">
-              <h3 className="font-semibold text-foreground mb-4">Timer Settings</h3>
-              
-              <div className="space-y-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enableSound}
-                    onChange={(e) => setEnableSound(e.target.checked)}
-                    className="w-4 h-4 rounded accent-primary"
-                  />
-                  <span className="text-foreground">Enable completion sound</span>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoStartBreak}
-                    onChange={(e) => setAutoStartBreak(e.target.checked)}
-                    className="w-4 h-4 rounded accent-primary"
-                  />
-                  <span className="text-foreground">Auto-start break after work</span>
-                </label>
-
-                <button
-                  onClick={requestNotificationPermission}
-                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground hover:bg-secondary transition-all"
-                >
-                  Enable Browser Notifications
-                </button>
-
-                <button
-                  onClick={saveSettings}
-                  className="w-full px-4 py-3 bg-primary text-foreground font-semibold rounded-lg hover:shadow-lg transition-all"
-                >
-                  Save Settings
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Info Box */}
-        <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm text-foreground">
-            <strong>💡 How it works:</strong> Set your work and break durations, then start! 
-            After each work session, the timer will switch to a break session. Complete cycles to stay productive and well-rested.
-          </p>
         </div>
 
       </div>
