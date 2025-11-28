@@ -137,7 +137,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
             disabled={loading || taskTypes.length === 0}
           >
             {loading ? (
-              <option value="">Loading task types...</option>
+              <option value="">Loading...</option>
             ) : taskTypes.length === 0 ? (
               <option value="">No task types available - Create one first</option>
             ) : (
