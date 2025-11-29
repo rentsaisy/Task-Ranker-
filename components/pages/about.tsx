@@ -72,7 +72,9 @@ export default function AboutPage() {
               </div>
             </a>
             <a
-              href="#"
+              href="https://currents-portfolio.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
               className="bg-card border border-border rounded-xl p-4 hover:shadow-md smooth-transition flex items-center gap-3"
             >
               <Globe className="w-5 h-5 text-primary" />
