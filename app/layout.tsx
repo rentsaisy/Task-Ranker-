@@ -12,6 +12,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Task Ranker",
+  icons: "/iconTaskRanker.png",
   description: "ML-powered academic task prioritization dashboard",
   generator: "v0.app",
 }
