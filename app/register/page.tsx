@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Brain, Mail, Lock, User, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
+import { Sparkles, Mail, Lock, User, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 
 export default function RegisterPage() {
@@ -86,7 +86,7 @@ export default function RegisterPage() {
         {/* Logo and Title */}
         <div className="text-center mb-3">
           <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary via-accent to-ml-accent rounded-xl shadow-lg mb-2">
-            <Brain className="w-5 h-5 text-white" />
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
           <h1 className="text-xl font-bold text-foreground mb-0.5">
             Task Ranker
@@ -115,7 +115,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-2.5">
             <div className="space-y-1">
               <Label htmlFor="name" className="text-foreground text-xs">
-                Full Name
+                Username
               </Label>
               <div className="relative">
                 <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -123,7 +123,7 @@ export default function RegisterPage() {
                   id="name"
                   name="name"
                   type="text"
-                  placeholder="Aisyah Currents"
+                  placeholder="username"
                   value={formData.name}
                   onChange={handleChange}
                   className="pl-8 h-9 text-sm"
@@ -142,7 +142,7 @@ export default function RegisterPage() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="student@example.com"
+                  placeholder="email@example.com"
                   value={formData.email}
                   onChange={handleChange}
                   className="pl-8 h-9 text-sm"

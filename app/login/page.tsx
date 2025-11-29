@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Brain, Mail, Lock, AlertCircle, Eye, EyeOff, User } from "lucide-react"
+import { Sparkles, Mail, Lock, AlertCircle, Eye, EyeOff, User } from "lucide-react"
 import Link from "next/link"
 
 export default function LoginPage() {
@@ -58,7 +58,7 @@ export default function LoginPage() {
         {/* Logo and Title */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary via-accent to-ml-accent rounded-2xl shadow-lg mb-3">
-            <Brain className="w-6 h-6 text-white" />
+            <Sparkles className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-1">
             Task Ranker
