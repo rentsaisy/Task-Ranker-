@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { TrendingUp, Zap, Calendar } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 import TaskForm from "./task-form"
 import PriorityTable from "./priority-table"
 
@@ -97,22 +98,25 @@ export default function Dashboard() {
     )
   }
 
-  // Modal popup for generating
-  const GeneratingModal = () => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-card rounded-xl p-8 shadow-lg flex flex-col items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p className="text-lg text-muted-foreground font-semibold mb-2">Generating priority score...</p>
-        <p className="text-sm text-muted-foreground">Please wait while your task is being ranked.</p>
-      </div>
-    </div>
-  )
+  // ...existing code...
 
-  if (generating) {
-    setTimeout(() => {
-      window.location.reload()
-    }, 300)
-    return <GeneratingModal />
+  // Manual refresh handler
+  const handleManualRefresh = async () => {
+    setLoading(true)
+    try {
+      // Call the full ML refresh API endpoint
+      await fetch('/api/tasks/refresh-priority', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: 1 })
+      })
+      // Fetch new data from database
+      await fetchTasks()
+    } catch (error) {
+      console.error('Error refreshing tasks:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -157,8 +161,19 @@ export default function Dashboard() {
                   <h2 className="text-lg font-bold text-foreground">Ranking</h2>
                   <p className="text-sm text-muted-foreground">Finish it before it finish u</p>
                 </div>
+                <span
+                  className="ml-2 cursor-pointer p-2 rounded-full hover:bg-primary/10 transition"
+                  onClick={handleManualRefresh}
+                  title="Refresh ML Priority"
+                >
+                  <RotateCcw className="w-5 h-5 text-primary" />
+                </span>
               </div>
-              <PriorityTable tasks={tasks} />
+              {tasks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No tasks found. Add a task to see rankings.</div>
+              ) : (
+                <PriorityTable tasks={tasks} />
+              )}
             </div>
           </div>
         </div>

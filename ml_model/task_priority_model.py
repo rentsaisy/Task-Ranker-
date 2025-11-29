@@ -29,18 +29,28 @@ class TaskPriorityModel:
         """
         Predict raw priority score for a single task (not normalized)
         Urgency (deadline) is weighted much higher for more differentiation.
+        Task type influences score (e.g., 'work' > 'personal' > 'other').
         """
         days_until_due = self.calculate_days_until_due(task.get('due_date', ''))
         difficulty = int(task.get('difficulty', 1))
         weight = int(task.get('weight', 1))
+        type_name = str(task.get('type', '')).lower()
         # Stronger urgency: closer deadline = much higher score
-        urgency_score = max(0, 30 - days_until_due) * 10
+        urgency_score = max(0, 30 - days_until_due) * 50
         # Difficulty: 1-5
-        difficulty_score = difficulty * 3
+        difficulty_score = difficulty * 1
         # Weight: 1-10
-        weight_score = weight * 5
+        weight_score = weight * 1
+        # Type bonus: customize as needed
+        type_bonus = 0
+        if type_name == 'work':
+            type_bonus = 20
+        elif type_name == 'personal':
+            type_bonus = 10
+        elif type_name:
+            type_bonus = 5
         # Total raw score
-        return urgency_score + difficulty_score + weight_score
+        return urgency_score + difficulty_score + weight_score + type_bonus
     
     def predict_batch(self, tasks):
         """

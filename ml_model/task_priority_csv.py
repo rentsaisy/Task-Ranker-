@@ -19,9 +19,10 @@ class TaskPriorityModel:
         days_until_due = self.calculate_days_until_due(task['due_date'])
         difficulty = int(task['default_difficulty'])
         weight = int(task['default_weight'])
-        urgency_score = max(0, 30 - days_until_due) * 10
-        difficulty_score = difficulty * 3
-        weight_score = weight * 5
+        # Make urgency (deadline) the dominant factor
+        urgency_score = max(0, 30 - days_until_due) * 50
+        difficulty_score = difficulty * 1
+        weight_score = weight * 1
         return urgency_score + difficulty_score + weight_score
 
     def predict_batch(self, tasks):

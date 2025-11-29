@@ -104,51 +104,56 @@ export async function POST(request: NextRequest) {
       [user_id, task_type_id || null, title, due_date, priority_score]
     )
 
-    // Recalculate priority for all tasks for this user using ML model
+    // Recalculate priority for all tasks for this user using ML model (same as refresh)
     const [userTasks]: any = await pool.query('SELECT id, due_date, task_type_id FROM tasks WHERE user_id = ?', [user_id])
-    // Get difficulty and weight for each task
+    // Get difficulty, weight, and type for each task
     const tasksWithFeatures = await Promise.all(
       userTasks.map(async (task: any) => {
-        let diff = 5, w = 5
+        let diff = 5, w = 5, typeName = ''
         if (task.task_type_id) {
-          const [tt]: any = await pool.query('SELECT default_difficulty, default_weight FROM task_types WHERE id = ?', [task.task_type_id])
+          const [tt]: any = await pool.query('SELECT name, default_difficulty, default_weight FROM task_types WHERE id = ?', [task.task_type_id])
           if (tt.length > 0) {
             diff = tt[0].default_difficulty
             w = tt[0].default_weight
+            typeName = tt[0].name
           }
         }
         return {
           id: task.id,
           due_date: task.due_date,
           difficulty: diff,
-          weight: w
+          weight: w,
+          type: typeName
         }
       })
     )
 
-    // Batch ML prediction
-    const inputForML = tasksWithFeatures.map(t => ({ due_date: t.due_date, difficulty: t.difficulty, weight: t.weight }))
+    // Batch ML prediction (type, deadline, difficulty, weight)
+    const inputForML = tasksWithFeatures.map(t => ({ due_date: t.due_date, difficulty: t.difficulty, weight: t.weight, type: t.type }))
     const scriptPath = path.join(process.cwd(), 'ml_model', 'task_priority_model.py')
     const inputJson = JSON.stringify(inputForML)
     // Escape double quotes for shell
-    const safeInputJson = inputJson.replace(/"/g, '\\"');
-    // Use double quotes for JSON argument
+    const safeInputJson = inputJson.replace(/"/g, '\"');
     const pythonCommand = `python "${scriptPath}" "${safeInputJson}"`;
     let priorities: number[] = [];
     try {
       const { stdout } = await execAsync(pythonCommand, { timeout: 10000 });
       const result = JSON.parse(stdout.trim());
       priorities = result.priorities || [];
+      // Always normalize so sum = 100
+      const sum = priorities.reduce((a, b) => a + b, 0)
+      if (sum !== 100 && priorities.length > 0) {
+        priorities = priorities.map(p => +(p * 100 / sum).toFixed(2))
+      }
     } catch (err) {
       console.error('Batch ML error:', err);
-      // fallback: assign 50 to all
-      priorities = tasksWithFeatures.map(() => 50);
+      priorities = tasksWithFeatures.map(() => +(100 / tasksWithFeatures.length).toFixed(2));
     }
 
     // Update each task's priority_score
     await Promise.all(
       tasksWithFeatures.map((task, idx) =>
-        pool.query('UPDATE tasks SET priority_score = ? WHERE id = ?', [priorities[idx] || 50, task.id])
+        pool.query('UPDATE tasks SET priority_score = ? WHERE id = ?', [priorities[idx] || 0, task.id])
       )
     )
 
