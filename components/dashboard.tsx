@@ -136,7 +136,7 @@ export default function Dashboard() {
             value={tasks.length.toString()}
             icon={TrendingUp}
             color="from-primary/20 to-primary/5"
-            trend="+2 this week"
+            trend="this week"
           />
           <StatCard
             title="Task Types Used"

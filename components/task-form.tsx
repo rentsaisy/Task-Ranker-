@@ -26,6 +26,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([])
   const [loading, setLoading] = useState(true)
   const [showLoading, setShowLoading] = useState(false)
+  const [alertMessage, setAlertMessage] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTaskTypes()
@@ -88,14 +89,24 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
   }
 
   const showAlertPopup = (message: string) => {
-    // ...existing code for error alerts...
-    // This is only for error alerts, not for loading
-    // You can keep this for validation errors
+    setAlertMessage(message)
+    setTimeout(() => setAlertMessage(null), 2500)
   }
 
   return (
     <div className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow smooth-transition h-fit">
-      
+      {/* Error Alert Popup */}
+      {alertMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="bg-red-600 px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[220px]">
+            <div className="flex-1 flex items-center gap-2">
+              <X className="w-5 h-5 text-white" />
+              <p className="font-semibold text-white">{alertMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loading Animation Popup */}
       {showLoading && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">

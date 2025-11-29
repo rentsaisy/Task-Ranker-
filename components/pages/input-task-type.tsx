@@ -164,6 +164,17 @@ export default function InputTaskTypePage() {
 
   return (
     <div className="h-[88vh] overflow-hidden p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
+      {/* Success Popup Top Right - Gradient like Generate Button */}
+      {submitted && (
+        <div className="fixed top-6 right-8 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="bg-gradient-to-r from-primary to-accent text-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 min-w-[220px]">
+            <CheckCircle className="w-5 h-5 text-white flex-shrink-0" />
+            <p className="text-sm font-semibold">
+              {editingId ? "Task type updated!" : "Task type added!"}
+            </p>
+          </div>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto space-y-8">
         {showAlertModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -280,16 +291,7 @@ export default function InputTaskTypePage() {
               </form>
 
               {/* Success Feedback */}
-              {submitted && (
-                <div className="mt-4 bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/50 rounded-xl p-4 flex items-center gap-3 smooth-transition">
-                  <CheckCircle className="w-5 h-5 text-accent flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {editingId ? "Task type updated!" : "Task type added!"}
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Success Popup Top Right - Filled Color */}
             </div>
 
             {/* Info Box */}
@@ -341,7 +343,6 @@ export default function InputTaskTypePage() {
                                 <div key={i} className="w-1.5 h-4 bg-primary rounded-sm" />
                               ))}
                             </div>
-                            <span className="text-primary font-semibold">{taskType.default_difficulty}/10</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">Weight:</span>
