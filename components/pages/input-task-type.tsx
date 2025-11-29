@@ -11,6 +11,8 @@ interface TaskType {
 }
 
 export default function InputTaskTypePage() {
+    const [showAlertModal, setShowAlertModal] = useState(false)
+    const [alertMessage, setAlertMessage] = useState("")
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
@@ -114,17 +116,29 @@ export default function InputTaskTypePage() {
         const response = await fetch(`/api/task-types?id=${deletingTaskType.id}`, {
           method: 'DELETE',
         })
-
-        if (response.ok) {
+        const result = await response.json()
+        if (response.ok && !result.error) {
           await fetchTaskTypes()
+          setShowDeleteModal(false)
+          setDeletingTaskType(null)
+        } else if (result.error) {
+          // Remove the prefix if present
+          const msg = result.error.replace(/^Cannot delete task type\.\s*/, "")
+          setAlertMessage(msg)
+          setShowAlertModal(true)
+          setShowDeleteModal(false)
+          setDeletingTaskType(null)
         }
       } catch (error) {
         console.error('Error deleting task type:', error)
+        setAlertMessage("Failed to delete task type.")
+        setShowAlertModal(true)
+        setShowDeleteModal(false)
+        setDeletingTaskType(null)
       }
-      
-      setShowDeleteModal(false)
-      setDeletingTaskType(null)
     }
+        {/* Alert Modal for delete error */}
+  // ...existing code...
   }
 
   const cancelDelete = () => {
@@ -151,7 +165,26 @@ export default function InputTaskTypePage() {
   return (
     <div className="h-[88vh] overflow-hidden p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+        {showAlertModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card rounded-xl border border-border p-8 max-w-md w-full shadow-2xl relative overflow-hidden animate-scale-in">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-red-50 to-orange-50 dark:from-orange-950/20 dark:via-red-950/20 dark:to-orange-950/20" />
+              <div className="relative z-10 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4 animate-pulse">
+                  <AlertTriangle className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Cannot Delete Task Type</h2>
+                <p className="text-muted-foreground mb-4">{alertMessage}</p>
+                <button
+                  onClick={() => setShowAlertModal(false)}
+                  className="bg-primary text-primary-foreground font-semibold py-2 px-6 rounded-lg transition-all duration-200 smooth-transition hover:bg-primary/80 active:scale-95"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form */}
           <div className="space-y-6">
@@ -166,7 +199,6 @@ export default function InputTaskTypePage() {
                   Define task types with their default difficulty and weight levels
                 </p>
               </div>
-
               <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Task Type Name */}
                 <div>
@@ -182,7 +214,6 @@ export default function InputTaskTypePage() {
                     required
                   />
                 </div>
-
                 {/* Difficulty */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
