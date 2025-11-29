@@ -83,20 +83,75 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Calculate priority using ML model
-    const priority_score = await calculatePriorityML({
-      due_date,
-      difficulty,
-      weight
-    })
-    
+    // Check if tasks table is empty
+    const [taskCountRows]: any = await pool.query('SELECT COUNT(*) as count FROM tasks')
+    const isFirstTask = taskCountRows[0].count === 0
+
+    // Calculate priority using ML model or set to 100 if first task
+    let priority_score = 100
+    if (!isFirstTask) {
+      priority_score = await calculatePriorityML({
+        due_date,
+        difficulty,
+        weight
+      })
+    }
+
     // Insert task into database
     const [result]: any = await pool.query(
       `INSERT INTO tasks (user_id, task_type_id, title, due_date, priority_score, created_at, updated_at) 
        VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
       [user_id, task_type_id || null, title, due_date, priority_score]
     )
-    
+
+    // Recalculate priority for all tasks for this user using ML model
+    const [userTasks]: any = await pool.query('SELECT id, due_date, task_type_id FROM tasks WHERE user_id = ?', [user_id])
+    // Get difficulty and weight for each task
+    const tasksWithFeatures = await Promise.all(
+      userTasks.map(async (task: any) => {
+        let diff = 5, w = 5
+        if (task.task_type_id) {
+          const [tt]: any = await pool.query('SELECT default_difficulty, default_weight FROM task_types WHERE id = ?', [task.task_type_id])
+          if (tt.length > 0) {
+            diff = tt[0].default_difficulty
+            w = tt[0].default_weight
+          }
+        }
+        return {
+          id: task.id,
+          due_date: task.due_date,
+          difficulty: diff,
+          weight: w
+        }
+      })
+    )
+
+    // Batch ML prediction
+    const inputForML = tasksWithFeatures.map(t => ({ due_date: t.due_date, difficulty: t.difficulty, weight: t.weight }))
+    const scriptPath = path.join(process.cwd(), 'ml_model', 'task_priority_model.py')
+    const inputJson = JSON.stringify(inputForML)
+    // Escape double quotes for shell
+    const safeInputJson = inputJson.replace(/"/g, '\\"');
+    // Use double quotes for JSON argument
+    const pythonCommand = `python "${scriptPath}" "${safeInputJson}"`;
+    let priorities: number[] = [];
+    try {
+      const { stdout } = await execAsync(pythonCommand, { timeout: 10000 });
+      const result = JSON.parse(stdout.trim());
+      priorities = result.priorities || [];
+    } catch (err) {
+      console.error('Batch ML error:', err);
+      // fallback: assign 50 to all
+      priorities = tasksWithFeatures.map(() => 50);
+    }
+
+    // Update each task's priority_score
+    await Promise.all(
+      tasksWithFeatures.map((task, idx) =>
+        pool.query('UPDATE tasks SET priority_score = ? WHERE id = ?', [priorities[idx] || 50, task.id])
+      )
+    )
+
     return NextResponse.json(
       { 
         success: true, 

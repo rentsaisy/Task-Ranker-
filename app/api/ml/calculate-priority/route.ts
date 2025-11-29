@@ -32,8 +32,10 @@ export async function POST(request: NextRequest) {
     // Path to Python script
     const scriptPath = path.join(process.cwd(), 'ml_model', 'task_priority_model.py');
 
-    // Execute Python script
-    const pythonCommand = `python "${scriptPath}" '${inputJson.replace(/'/g, "\\'")}'`;
+    // Escape double quotes for shell
+    const safeInputJson = inputJson.replace(/"/g, '\\"');
+    // Execute Python script with double quotes around JSON
+    const pythonCommand = `python "${scriptPath}" "${safeInputJson}"`;
     
     try {
       const { stdout, stderr } = await execAsync(pythonCommand, {

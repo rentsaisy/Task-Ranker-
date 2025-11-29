@@ -1,18 +1,41 @@
+
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
-import { Brain, TrendingUp, Zap, Calendar } from "lucide-react"
+import { TrendingUp, Zap, Calendar } from "lucide-react"
 import TaskForm from "./task-form"
 import PriorityTable from "./priority-table"
-import PriorityChart from "./priority-chart"
+
+interface StatCardProps {
+  title: string
+  value: string
+  icon: React.ComponentType<{ className: string }>
+  color: string
+  trend: string
+}
+
+function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
+  return (
+    <div className={`bg-gradient-to-br ${color} border border-border rounded-xl p-5 smooth-transition hover:shadow-md hover:border-primary/30`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          <p className="text-3xl font-bold text-foreground mt-2">{value}</p>
+          <p className="text-xs text-muted-foreground mt-2">{trend}</p>
+        </div>
+        <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg flex items-center justify-center">
+          <Icon className="w-6 h-6 text-primary" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
 
-  // Fetch tasks from database
   useEffect(() => {
     fetchTasks()
   }, [])
@@ -31,6 +54,7 @@ export default function Dashboard() {
   }
 
   const handleAddTask = async (newTask: any) => {
+    setGenerating(true)
     try {
       const response = await fetch('/api/tasks', {
         method: 'POST',
@@ -42,15 +66,18 @@ export default function Dashboard() {
           due_date: newTask.deadline,
         }),
       })
-      
       const result = await response.json()
-      
       if (result.success) {
-        // Refresh task list
-        fetchTasks()
+        // Wait a moment for backend to update, then reload page
+        setTimeout(() => {
+          window.location.reload()
+        }, 1200)
+      } else {
+        setGenerating(false)
       }
     } catch (error) {
       console.error('Error adding task:', error)
+      setGenerating(false)
     }
   }
 
@@ -70,10 +97,27 @@ export default function Dashboard() {
     )
   }
 
+  // Modal popup for generating
+  const GeneratingModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-card rounded-xl p-8 shadow-lg flex flex-col items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-lg text-muted-foreground font-semibold mb-2">Generating priority score...</p>
+        <p className="text-sm text-muted-foreground">Please wait while your task is being ranked.</p>
+      </div>
+    </div>
+  )
+
+  if (generating) {
+    setTimeout(() => {
+      window.location.reload()
+    }, 300)
+    return <GeneratingModal />
+  }
+
   return (
     <div className="h-[88vh] overflow-hidden p-3 md:p-6 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
       <div className="max-w-7xl mx-auto space-y-6">
-
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <StatCard
@@ -98,14 +142,12 @@ export default function Dashboard() {
             trend="Score"
           />
         </div>
-
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Form */}
           <div className="lg:col-span-1">
             <TaskForm onAddTask={handleAddTask} />
           </div>  
-
           {/* Right Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Priority Table */}
@@ -119,33 +161,6 @@ export default function Dashboard() {
               <PriorityTable tasks={tasks} />
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-interface StatCardProps {
-  title: string
-  value: string
-  icon: React.ComponentType<{ className: string }>
-  color: string
-  trend: string
-}
-
-function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
-  return (
-    <div
-      className={`bg-gradient-to-br ${color} border border-border rounded-xl p-5 smooth-transition hover:shadow-md hover:border-primary/30`}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
-          <p className="text-3xl font-bold text-foreground mt-2">{value}</p>
-          <p className="text-xs text-muted-foreground mt-2">{trend}</p>
-        </div>
-        <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg flex items-center justify-center">
-          <Icon className="w-6 h-6 text-primary" />
         </div>
       </div>
     </div>
