@@ -181,7 +181,6 @@ export default function TaskListPage() {
                 <tr className="border-b border-border bg-secondary/50">
                   <th className="text-left py-6 px-7 font-semibold text-foreground">Task Name</th>
                   <th className="text-left py-6 px-7 font-semibold text-foreground">Task Type</th>
-                  <th className="text-left py-6 px-7 font-semibold text-foreground">Priority</th>
                   <th className="text-left py-6 px-7 font-semibold text-foreground">Deadline</th>
                   <th className="text-center py-6 px-7 font-semibold text-foreground">Actions</th>
                 </tr>
@@ -198,15 +197,6 @@ export default function TaskListPage() {
                     <tr key={task.id} className="border-b border-border hover:bg-secondary/50 smooth-transition">
                       <td className="py-3 px-5 font-medium text-foreground">{task.title}</td>
                       <td className="py-3 px-5 text-muted-foreground">{task.task_type_name || 'N/A'}</td>
-                      <td className="py-3 px-5">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          (task.priority_score || 0) >= 80 ? 'bg-red-500/20 text-red-400' :
-                          (task.priority_score || 0) >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-green-500/20 text-green-400'
-                        }`}>
-                          {Math.round(task.priority_score || 0)}
-                        </span>
-                      </td>
                       <td className="py-3 px-5 text-muted-foreground flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
                         {new Date(task.due_date).toLocaleDateString()}

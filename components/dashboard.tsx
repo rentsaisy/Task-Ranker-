@@ -82,10 +82,17 @@ export default function Dashboard() {
     }
   }
 
-  const highPriorityCount = tasks.filter((t) => (t.priority_score || 0) >= 80).length
-  const avgPriority = tasks.length > 0 
-    ? Math.round(tasks.reduce((a, b) => a + (b.priority_score || 0), 0) / tasks.length)
-    : 0
+  // Example new stats unrelated to priority
+  // Show number of unique task types used
+  const uniqueTaskTypes = Array.from(new Set(tasks.map(t => t.task_type_name || t.taskType || 'N/A'))).length
+  const upcomingTasks = tasks.filter((t) => {
+    const deadline = t.due_date || t.deadline
+    if (!deadline) return false
+    const date = new Date(deadline)
+    const now = new Date()
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return diffDays > 0 && diffDays <= 4
+  }).length
 
   if (loading) {
     return (
@@ -132,18 +139,18 @@ export default function Dashboard() {
             trend="+2 this week"
           />
           <StatCard
-            title="High Priority"
-            value={highPriorityCount.toString()}
+            title="Task Types Used"
+            value={uniqueTaskTypes.toString()}
             icon={Zap}
             color="from-accent/20 to-accent/5"
-            trend="Critical tasks"
+            trend="Types in use"
           />
           <StatCard
-            title="Average Priority"
-            value={avgPriority.toString()}
+            title="Upcoming Deadlines"
+            value={upcomingTasks.toString()}
             icon={Calendar}
             color="from-blue-200/20 to-blue-200/5"
-            trend="Score"
+            trend="Tasks due soon"
           />
         </div>
         {/* Main Content Grid */}

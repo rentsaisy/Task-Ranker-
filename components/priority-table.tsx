@@ -53,7 +53,6 @@ export default function PriorityTable({ tasks }: PriorityTableProps) {
               <th className="text-left py-1.5 px-2.5 font-semibold text-foreground text-xs">Task Name</th>
               <th className="text-left py-1.5 px-2.5 font-semibold text-foreground text-xs">Task Type</th>
               <th className="text-left py-1.5 px-2.5 font-semibold text-foreground text-xs">Deadline</th>
-              <th className="text-center py-1.5 px-2.5 font-semibold text-foreground text-xs">Priority</th>
             </tr>
           </thead>
           <tbody>
@@ -61,9 +60,7 @@ export default function PriorityTable({ tasks }: PriorityTableProps) {
               const taskName = task.title || task.name || 'Untitled'
               const taskType = task.task_type_name || task.taskType || 'N/A'
               const deadline = task.due_date || task.deadline || ''
-              const priority = task.priority_score || task.priority || 0
               const globalIndex = startIndex + index
-              
               return (
                 <tr key={task.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
                   <td className="py-1.5 px-2.5">
@@ -77,16 +74,6 @@ export default function PriorityTable({ tasks }: PriorityTableProps) {
                   <td className="py-1.5 px-2.5 text-muted-foreground text-sm">{taskType}</td>
                   <td className="py-1.5 px-2.5 text-muted-foreground text-sm">
                     {deadline ? new Date(deadline).toLocaleDateString() : 'No deadline'}
-                  </td>
-                  <td className="py-1.5 px-2.5 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-semibold text-xs flex items-center gap-1 ${getPriorityColor(priority)}`}
-                      >
-                        <TrendingUp className="w-3 h-3" />
-                        {Math.round(priority)}%
-                      </span>
-                    </div>
                   </td>
                 </tr>
               )

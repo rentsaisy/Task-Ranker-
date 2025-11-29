@@ -25,8 +25,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
 
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAlert, setShowAlert] = useState(false)
-  const [alertMessage, setAlertMessage] = useState("")
+  const [showLoading, setShowLoading] = useState(false)
 
   useEffect(() => {
     fetchTaskTypes()
@@ -75,6 +74,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
       }
       return
     }
+    setShowLoading(true)
     onAddTask({
       ...formData,
       task_type_id: parseInt(formData.task_type_id)
@@ -84,32 +84,26 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
       task_type_id: "", 
       deadline: "" 
     })
+    setTimeout(() => setShowLoading(false), 2000)
   }
 
   const showAlertPopup = (message: string) => {
-    setAlertMessage(message)
-    setShowAlert(true)
-    setTimeout(() => {
-      setShowAlert(false)
-    }, 3000)
+    // ...existing code for error alerts...
+    // This is only for error alerts, not for loading
+    // You can keep this for validation errors
   }
 
   return (
     <div className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow smooth-transition h-fit">
       
-      {/* Alert Popup */}
-      {showAlert && (
+      {/* Loading Animation Popup */}
+      {showLoading && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
-          <div className="bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]">
-            <div className="flex-1">
-              <p className="font-semibold">{alertMessage}</p>
+          <div className="bg-primary px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[220px]">
+            <div className="flex-1 flex items-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              <p className="font-semibold text-white">please waiting..</p>
             </div>
-            <button
-              onClick={() => setShowAlert(false)}
-              className="text-white hover:text-gray-200 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
       )}
