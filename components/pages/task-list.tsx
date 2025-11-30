@@ -61,7 +61,14 @@ export default function TaskListPage() {
   const fetchTasks = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/tasks?userId=1')
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!user.id) {
+        setTasks([])
+        setFilteredTasks([])
+        setLoading(false)
+        return
+      }
+      const response = await fetch(`/api/tasks?userId=${user.id}`)
       const data = await response.json()
       setTasks(data)
       setFilteredTasks(data)
@@ -74,7 +81,12 @@ export default function TaskListPage() {
 
   const fetchTaskTypes = async () => {
     try {
-      const response = await fetch('/api/task-types?userId=1')
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!user.id) {
+        setTaskTypes([])
+        return
+      }
+      const response = await fetch(`/api/task-types?userId=${user.id}`)
       const data = await response.json()
       setTaskTypes(data)
     } catch (error) {

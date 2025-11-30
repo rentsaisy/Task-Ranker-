@@ -11,6 +11,23 @@ interface TaskType {
 }
 
 export default function InputTaskTypePage() {
+        // Edit handler
+        const handleEdit = (taskType: TaskType) => {
+          setEditingId(taskType.id)
+          setFormData({
+            name: taskType.name,
+            difficulty: taskType.default_difficulty,
+            weight: taskType.default_weight,
+          })
+        }
+
+        // Delete handler
+        const handleDelete = (taskType: TaskType) => {
+          setShowDeleteModal(true)
+          setDeletingTaskType(taskType)
+        }
+      const [successMessage, setSuccessMessage] = useState<string | null>(null)
+      const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [showAlertModal, setShowAlertModal] = useState(false)
     const [alertMessage, setAlertMessage] = useState("")
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([])
@@ -35,7 +52,8 @@ export default function InputTaskTypePage() {
   const fetchTaskTypes = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/task-types?userId=1')
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const response = await fetch(`/api/task-types?userId=${user.id}`)
       const data = await response.json()
       setTaskTypes(data)
     } catch (error) {
@@ -51,8 +69,17 @@ export default function InputTaskTypePage() {
       alert("Please enter a task type name")
       return
     }
-
+    // Check for duplicate task type name for current user
+    const duplicate = taskTypes.some(
+      (t) => t.name.trim().toLowerCase() === formData.name.trim().toLowerCase()
+    )
+    if (duplicate && !editingId) {
+      setErrorMessage("Task type name already exists for you!")
+      setTimeout(() => setErrorMessage(null), 2500)
+      return
+    }
     try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
       if (editingId) {
         // Update existing task type
         const response = await fetch('/api/task-types', {
@@ -63,12 +90,14 @@ export default function InputTaskTypePage() {
             name: formData.name,
             default_difficulty: formData.difficulty,
             default_weight: formData.weight,
+            user_id: user.id,
           }),
         })
 
         if (response.ok) {
           await fetchTaskTypes()
           setEditingId(null)
+          setSuccessMessage("Task type updated!")
         }
       } else {
         // Add new task type
@@ -76,7 +105,7 @@ export default function InputTaskTypePage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: 1, // TODO: Get from auth
+            user_id: user.id,
             name: formData.name,
             default_difficulty: formData.difficulty,
             default_weight: formData.weight,
@@ -85,29 +114,19 @@ export default function InputTaskTypePage() {
 
         if (response.ok) {
           await fetchTaskTypes()
+          setSuccessMessage("Task type added!")
         }
       }
 
       setFormData({ name: "", difficulty: 3, weight: 5 })
       setSubmitted(true)
-      setTimeout(() => setSubmitted(false), 2000)
+      setTimeout(() => {
+        setSubmitted(false)
+        setSuccessMessage(null)
+      }, 2000)
     } catch (error) {
       console.error('Error saving task type:', error)
     }
-  }
-
-  const handleEdit = (taskType: TaskType) => {
-    setFormData({
-      name: taskType.name,
-      difficulty: taskType.default_difficulty,
-      weight: taskType.default_weight,
-    })
-    setEditingId(taskType.id)
-  }
-
-  const handleDelete = (taskType: TaskType) => {
-    setDeletingTaskType(taskType)
-    setShowDeleteModal(true)
   }
 
   const confirmDelete = async () => {
@@ -137,8 +156,6 @@ export default function InputTaskTypePage() {
         setDeletingTaskType(null)
       }
     }
-        {/* Alert Modal for delete error */}
-  // ...existing code...
   }
 
   const cancelDelete = () => {
@@ -160,13 +177,31 @@ export default function InputTaskTypePage() {
         </div>
       </div>
     )
+        {/* Error Popup for duplicate task type name (styled like success popup) */}
+        {errorMessage && (
+          <div className="fixed top-6 right-8 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+            <div className="bg-gradient-to-r from-red-600 to-red-400 text-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 min-w-[220px]">
+              <AlertTriangle className="w-5 h-5 text-white flex-shrink-0" />
+              <p className="text-sm font-semibold">{errorMessage}</p>
+            </div>
+          </div>
+        )}
   }
 
   return (
     <div className="h-[88vh] overflow-hidden p-4 md:p-8 bg-gradient-to-br from-background via-secondary/20 to-background neural-bg">
+      {/* Error Popup for duplicate task type name (styled like success popup) */}
+      {errorMessage && (
+        <div className="fixed top-6 right-8 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="bg-gradient-to-r from-red-600 to-red-400 text-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 min-w-[220px]">
+            <AlertTriangle className="w-5 h-5 text-white flex-shrink-0" />
+            <p className="text-sm font-semibold">{errorMessage}</p>
+          </div>
+        </div>
+      )}
       {/* Success Popup Top Right - Gradient like Generate Button */}
       {submitted && (
-        <div className="fixed top-6 right-8 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+        <div className="fixed top-16 right-8 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
           <div className="bg-gradient-to-r from-primary to-accent text-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 min-w-[220px]">
             <CheckCircle className="w-5 h-5 text-white flex-shrink-0" />
             <p className="text-sm font-semibold">
@@ -328,47 +363,53 @@ export default function InputTaskTypePage() {
               </div>
 
               <div className="space-y-4">
-                {taskTypes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((taskType) => (
-                  <div
-                    key={taskType.id}
-                    className="bg-secondary/30 border border-border rounded-lg p-2 hover:bg-secondary/50 transition-colors smooth-transition">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1.5 text-sm">{taskType.name}</h3>
-                        <div className="flex gap-4 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">Difficulty:</span>
-                            <div className="flex gap-1">
-                              {Array.from({ length: taskType.default_difficulty }).map((_, i) => (
-                                <div key={i} className="w-1.5 h-4 bg-primary rounded-sm" />
-                              ))}
+                {taskTypes.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-6">
+                    No task types found. Please add a new task type.
+                  </div>
+                ) : (
+                  taskTypes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((taskType) => (
+                    <div
+                      key={taskType.id}
+                      className="bg-secondary/30 border border-border rounded-lg p-2 hover:bg-secondary/50 transition-colors smooth-transition">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground mb-1.5 text-sm">{taskType.name}</h3>
+                          <div className="flex gap-4 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Difficulty:</span>
+                              <div className="flex gap-1">
+                                {Array.from({ length: taskType.default_difficulty }).map((_, i) => (
+                                  <div key={i} className="w-1.5 h-4 bg-primary rounded-sm" />
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Weight:</span>
+                              <span className="text-accent font-semibold">{taskType.default_weight}/10</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">Weight:</span>
-                            <span className="text-accent font-semibold">{taskType.default_weight}/10</span>
-                          </div>
+                        </div>
+                        <div className="flex gap-2 ml-4">
+                          <button
+                            onClick={() => handleEdit(taskType)}
+                            className="p-2 hover:bg-primary/10 rounded-lg transition-colors text-primary"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(taskType)}
+                            className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <button
-                          onClick={() => handleEdit(taskType)}
-                          className="p-2 hover:bg-primary/10 rounded-lg transition-colors text-primary"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(taskType)}
-                          className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Pagination Controls */}

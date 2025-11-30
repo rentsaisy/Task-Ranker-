@@ -35,19 +35,14 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
   const fetchTaskTypes = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/task-types')
-      
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const response = await fetch(`/api/task-types?userId=${user.id}`)
       if (!response.ok) {
         throw new Error('Failed to fetch task types')
       }
-      
       const data = await response.json()
-      
-      // Ensure data is an array
       if (Array.isArray(data)) {
         setTaskTypes(data)
-        
-        // Don't auto-select, leave empty for placeholder
         if (data.length > 0) {
           setFormData(prev => ({ ...prev, task_type_id: "" }))
         }

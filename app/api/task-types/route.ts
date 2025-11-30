@@ -9,12 +9,45 @@ const dbConfig = {
 }
 
 // GET - Fetch all task types
-export async function GET() {
+export async function GET(request: NextRequest) {
   let connection
   try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
+    if (!userId) {
+      return NextResponse.json([], { status: 200 })
+    }
     connection = await mysql.createConnection(dbConfig)
     const [rows] = await connection.execute(
-      "SELECT id, name, default_difficulty, default_weight, created_at FROM task_types ORDER BY created_at DESC"
+      "SELECT id, user_id, name, default_difficulty, default_weight, created_at FROM task_types WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
+    )
+    return NextResponse.json(rows)
+  } catch (error) {
+    console.error("Database error:", error)
+    return NextResponse.json(
+      { error: "Failed to fetch task types" },
+      { status: 500 }
+    )
+  } finally {
+    if (connection) await connection.end()
+  }
+
+}
+
+// GET with userId filtering
+export async function GET_WITH_USER(request: NextRequest) {
+  let connection
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
+    if (!userId) {
+      return NextResponse.json({ error: "userId is required" }, { status: 400 })
+    }
+    connection = await mysql.createConnection(dbConfig)
+    const [rows] = await connection.execute(
+      "SELECT id, user_id, name, default_difficulty, default_weight, created_at FROM task_types WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
     )
     return NextResponse.json(rows)
   } catch (error) {
@@ -33,24 +66,24 @@ export async function POST(request: NextRequest) {
   let connection
   try {
     const body = await request.json()
-    const { name, default_difficulty, default_weight } = body
+    const { name, default_difficulty, default_weight, user_id } = body
 
-    if (!name || !default_difficulty || !default_weight) {
+    if (!name || !default_difficulty || !default_weight || !user_id) {
       return NextResponse.json(
-        { error: "Name, difficulty, and weight are required" },
+        { error: "Name, difficulty, weight, and user_id are required" },
         { status: 400 }
       )
     }
 
     connection = await mysql.createConnection(dbConfig)
     const [result] = await connection.execute(
-      "INSERT INTO task_types (name, default_difficulty, default_weight) VALUES (?, ?, ?)",
-      [name, default_difficulty, default_weight]
+      "INSERT INTO task_types (name, default_difficulty, default_weight, user_id) VALUES (?, ?, ?, ?)",
+      [name, default_difficulty, default_weight, user_id]
     )
 
     const insertId = (result as any).insertId
     const [rows] = await connection.execute(
-      "SELECT id, name, default_difficulty, default_weight, created_at FROM task_types WHERE id = ?",
+      "SELECT id, user_id, name, default_difficulty, default_weight, created_at FROM task_types WHERE id = ?",
       [insertId]
     ) as any
 

@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setFormData({
@@ -59,9 +60,10 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Store user session
-        localStorage.setItem("user", JSON.stringify(data.user))
-        router.push("/")
+        setSuccess(true)
+        setTimeout(() => {
+          router.push("/login")
+        }, 1800)
       } else {
         setError(data.error || "Registration failed")
       }
@@ -74,6 +76,15 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen auth-gradient-bg flex items-center justify-center p-3 overflow-hidden relative">
+      {/* Success Popup Top Right - Gradient like Generate Button */}
+      {success && (
+        <div className="fixed top-6 right-8 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="bg-gradient-to-r from-primary to-accent text-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 min-w-[220px]">
+            <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0" />
+            <p className="text-sm font-semibold">Registration successful! Redirecting to login...</p>
+          </div>
+        </div>
+      )}
       {/* Floating shapes */}
       <div className="floating-shape floating-shape-1" />
       <div className="floating-shape floating-shape-2" />

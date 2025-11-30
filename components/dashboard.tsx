@@ -34,6 +34,8 @@ function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<any[]>([])
+  // Always use sortedTasks for both tables
+  const sortedTasks = [...tasks].sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0))
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
 
@@ -44,7 +46,13 @@ export default function Dashboard() {
   const fetchTasks = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/tasks?userId=1') // TODO: Get userId from auth
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!user.id) {
+        setTasks([])
+        setLoading(false)
+        return
+      }
+      const response = await fetch(`/api/tasks?userId=${user.id}`)
       const data = await response.json()
       setTasks(data)
     } catch (error) {
@@ -57,11 +65,12 @@ export default function Dashboard() {
   const handleAddTask = async (newTask: any) => {
     setGenerating(true)
     try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 1, // TODO: Get from auth
+          user_id: user.id,
           task_type_id: newTask.task_type_id,
           title: newTask.name,
           due_date: newTask.deadline,
@@ -111,12 +120,13 @@ export default function Dashboard() {
   const handleManualRefresh = async () => {
     setLoading(true)
     try {
-      // Call the full ML refresh API endpoint
-      await fetch('/api/tasks/refresh-priority', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: 1 })
-      })
+          const user = JSON.parse(localStorage.getItem('user') || '{}')
+          // Call the full ML refresh API endpoint
+          await fetch('/api/tasks/refresh-priority', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: user.id })
+          })
       // Fetch new data from database
       await fetchTasks()
     } catch (error) {
@@ -158,6 +168,15 @@ export default function Dashboard() {
           {/* Left Column - Form */}
           <div className="lg:col-span-1">
             <TaskForm onAddTask={handleAddTask} />
+            {/* Task List Table - Use PriorityTable for identical display */}
+            <div className="bg-card rounded-xl border border-border p-5 shadow-sm mt-6">
+              <h2 className="text-lg font-bold text-foreground mb-3">Task List</h2>
+              {sortedTasks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No tasks found. Add a task to see your list.</div>
+              ) : (
+                <PriorityTable tasks={sortedTasks} />
+              )}
+            </div>
           </div>  
           {/* Right Column */}
           <div className="lg:col-span-2 space-y-6">
@@ -176,10 +195,10 @@ export default function Dashboard() {
                   <RotateCcw className="w-5 h-5 text-primary" />
                 </span>
               </div>
-              {tasks.length === 0 ? (
+              {sortedTasks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">No tasks found. Add a task to see rankings.</div>
               ) : (
-                <PriorityTable tasks={tasks} />
+                <PriorityTable tasks={sortedTasks} />
               )}
             </div>
           </div>

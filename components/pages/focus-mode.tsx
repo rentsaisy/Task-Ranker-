@@ -28,8 +28,8 @@ export default function FocusModePage() {
   const alarmAudioRef = useRef<HTMLAudioElement | null>(null)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Mock user ID (in real app, get from auth context)
-  const userId = 1
+  // Get user ID from localStorage
+  const userId = typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('user') || '{}').id) : null
 
   // Load tasks and settings on mount
   useEffect(() => {
@@ -214,6 +214,7 @@ export default function FocusModePage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            userId,
             sessionId: currentSessionId,
             timeRemaining: remainingSeconds,
           }),
@@ -236,6 +237,7 @@ export default function FocusModePage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            userId,
             sessionId: currentSessionId,
           }),
         })
