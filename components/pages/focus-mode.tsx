@@ -481,7 +481,7 @@ export default function FocusModePage() {
                     <Clock className="w-4 h-4 text-primary" />
                     <span className="text-xs text-muted-foreground">Total Hours Today</span>
                   </div>
-                    <p className="text-xl font-bold text-foreground text-center">{totalMinutesToday > 0 ? (Math.ceil((totalMinutesToday / 60) * 100) / 100).toFixed(2) : '-'}</p>
+                    <p className="text-xl font-bold text-foreground text-center">{totalMinutesToday > 0 ? (totalMinutesToday / 60).toFixed(2) : '0.00'}</p>
                 </div>
               </div>
             </div>
