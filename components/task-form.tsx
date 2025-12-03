@@ -70,6 +70,18 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
       }
       return
     }
+
+    // Check if deadline is in the past
+    const selectedDate = new Date(formData.deadline)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    selectedDate.setHours(0, 0, 0, 0)
+
+    if (selectedDate < today) {
+      showAlertPopup("Cannot add task because deadline cannot be in the past")
+      return
+    }
+
     setShowLoading(true)
     onAddTask({
       ...formData,

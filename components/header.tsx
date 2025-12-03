@@ -1,6 +1,6 @@
 "use client"
 
-import { Menu, Brain, LayoutDashboard, Plus, List, Settings, Info, User, LogOut, XIcon, AlertTriangle } from "lucide-react"
+import { Menu, Brain, LayoutDashboard, Plus, List, Settings, Info, User, LogOut, XIcon, AlertTriangle, Bell } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import ProfileModal from "./profile-modal"
 import { useRouter } from "next/navigation"
@@ -26,7 +26,11 @@ export default function Header({ sidebarOpen, onToggleSidebar, currentPage }: He
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showSignOutDialog, setShowSignOutDialog] = useState(false)
+  const [expiredTaskCount, setExpiredTaskCount] = useState(0)
+  const [deletedTasks, setDeletedTasks] = useState<any[]>([])
+  const [showNotificationMenu, setShowNotificationMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
+  const notificationMenuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -34,6 +38,43 @@ export default function Header({ sidebarOpen, onToggleSidebar, currentPage }: He
     const userStr = localStorage.getItem("user")
     const user = userStr ? JSON.parse(userStr) : null
     const userId = user?.id || 1
+    
+    // Check for expired tasks and delete them
+    const checkAndDeleteExpiredTasks = async () => {
+      try {
+        const response = await fetch(`/api/tasks?userId=${userId}`)
+        if (!response.ok) throw new Error('Failed to fetch tasks')
+        
+        const tasks = await response.json()
+        const now = new Date()
+        now.setHours(0, 0, 0, 0)
+        const expiredTasks = []
+
+        for (const task of tasks) {
+          const dueDate = new Date(task.due_date || task.deadline)
+          dueDate.setHours(0, 0, 0, 0)
+          
+          if (dueDate < now) {
+            expiredTasks.push(task)
+            try {
+              await fetch(`/api/tasks?id=${task.id}`, { method: 'DELETE' })
+            } catch (err) {
+              console.error(`Failed to delete task ${task.id}:`, err)
+            }
+          }
+        }
+
+        if (expiredTasks.length > 0) {
+          setDeletedTasks(expiredTasks)
+          setExpiredTaskCount(expiredTasks.length)
+          console.log('Deleted expired tasks:', expiredTasks)
+        }
+      } catch (error) {
+        console.error('Error checking expired tasks:', error)
+      }
+    }
+
+    checkAndDeleteExpiredTasks()
     
     // Fetch profile from API on mount
     fetch(`/api/profile?userId=${userId}`)
@@ -63,6 +104,9 @@ export default function Header({ sidebarOpen, onToggleSidebar, currentPage }: He
     function handleClickOutside(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false)
+      }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+        setShowNotificationMenu(false)
       }
     }
 
@@ -123,8 +167,57 @@ export default function Header({ sidebarOpen, onToggleSidebar, currentPage }: He
           </div>
         </div>
 
-        {/* Right side - User profile */}
+        {/* Right side - Notifications & User profile */}
         <div className="flex items-center gap-4">
+          {/* Notification Bell Icon */}
+          <div className="relative" ref={notificationMenuRef}>
+            <button
+              onClick={() => setShowNotificationMenu(!showNotificationMenu)}
+              className="w-9 h-9 bg-secondary hover:bg-secondary/80 rounded-full flex items-center justify-center transition-colors relative"
+              title="Deleted tasks"
+            >
+              <Bell className="w-5 h-5 text-foreground" />
+              {expiredTaskCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {expiredTaskCount > 9 ? '9+' : expiredTaskCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Dropdown Menu */}
+            {showNotificationMenu && (
+              <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-4 border-b border-border">
+                  <h3 className="font-semibold text-foreground">Deleted Tasks</h3>
+                </div>
+                
+                {deletedTasks.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No tasks deleted</p>
+                  </div>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto">
+                    {deletedTasks.map((task, index) => (
+                      <div key={task.id} className="px-4 py-3 hover:bg-secondary/30 border-b border-border last:border-b-0 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                            #{index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate">{task.title || task.name || 'Untitled'}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{task.task_type_name || 'N/A'}</p>
+                            <p className="text-xs text-red-500 mt-1">Deadline: {new Date(task.due_date || task.deadline).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center gap-2 relative" ref={profileMenuRef}>
             <span className="hidden sm:inline text-sm font-medium text-foreground">{displayName}</span>
             <button 
