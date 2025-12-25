@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         userId: user_id,
         taskType: task_type_id || null,
         title,
-        dueDate: due_date ? new Date(due_date) : null,
+        // dueDate: due_date ? new Date(due_date) : null,  // TEMPORARILY DISABLED - database column missing
         priority: Math.round(priority_score)
       }
     })
@@ -184,7 +184,7 @@ export async function PUT(request: NextRequest) {
       data: {
         taskType: task_type_id || null,
         title,
-        dueDate: due_date ? new Date(due_date) : null,
+        // dueDate: due_date ? new Date(due_date) : null,  // TEMPORARILY DISABLED - database column missing
         priority: Math.round(priority_score)
       }
     })
