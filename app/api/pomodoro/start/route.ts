@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,21 +12,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const startTime = new Date();
-
-    // Create new session
-    const [result] = await pool.query(
-      `INSERT INTO pomodoro_sessions 
-       (user_id, task_id, duration_minutes, start_time, status)
-       VALUES (?, ?, ?, ?, 'active')`,
-      [userId, taskId || null, duration, startTime]
-    );
-
-    const sessionId = (result as any).insertId;
+    // Create new focus session
+    const session = await prisma.focusSession.create({
+      data: {
+        userId,
+        taskId: taskId || null,
+        duration,
+        startedAt: new Date()
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      sessionId,
+      sessionId: session.id,
       message: 'Timer started',
     });
 

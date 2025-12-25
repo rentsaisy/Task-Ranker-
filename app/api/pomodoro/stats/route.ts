@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,20 +14,28 @@ export async function GET(request: NextRequest) {
     }
 
     // Get today's completed sessions
-    const [stats] = await pool.query<any[]>(
-      `SELECT 
-         COUNT(*) as completed_today,
-         SUM(duration_minutes) as total_minutes
-       FROM pomodoro_sessions
-       WHERE user_id = ? 
-         AND DATE(start_time) = CURDATE()
-         AND status = 'completed'`,
-      [userId]
-    );
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const sessions = await prisma.focusSession.findMany({
+      where: {
+        userId,
+        completed: true,
+        completedAt: {
+          gte: today,
+          lt: tomorrow
+        }
+      }
+    });
+
+    const completedToday = sessions.length;
+    const totalMinutes = sessions.reduce((sum, session) => sum + (session.duration || 0), 0);
 
     return NextResponse.json({
-      completed_today: stats[0]?.completed_today || 0,
-      total_minutes: stats[0]?.total_minutes || 0,
+      completed_today: completedToday,
+      total_minutes: totalMinutes,
     });
 
   } catch (error: any) {

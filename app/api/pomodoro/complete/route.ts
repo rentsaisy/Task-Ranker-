@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,12 +12,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await pool.query(
-      `UPDATE pomodoro_sessions 
-       SET status = 'completed', end_time = NOW()
-       WHERE id = ?`,
-      [sessionId]
-    );
+    // Mark session as completed
+    await prisma.focusSession.update({
+      where: { id: sessionId },
+      data: {
+        completed: true,
+        completedAt: new Date()
+      }
+    });
 
     return NextResponse.json({
       success: true,

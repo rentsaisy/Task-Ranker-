@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,12 +12,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await pool.query(
-      `UPDATE pomodoro_sessions 
-       SET status = 'cancelled', end_time = NOW()
-       WHERE id = ?`,
-      [sessionId]
-    );
+    // Delete the session instead of marking as cancelled
+    await prisma.focusSession.delete({
+      where: { id: sessionId }
+    });
 
     return NextResponse.json({
       success: true,
