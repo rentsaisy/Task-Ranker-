@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/db"
 
+// Helper function to retry database operations
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let lastError: Error | null = null
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      lastError = error
+      // Only retry on connection errors, not on validation errors
+      if (error?.code !== 'P1001' && error?.code !== 'P1002') {
+        throw error
+      }
+      // Exponential backoff: 100ms, 200ms, 400ms
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i)))
+      }
+    }
+  }
+  
+  throw lastError
+}
+
 // GET - Fetch all task types
 export async function GET(request: NextRequest) {
   try {
@@ -10,10 +33,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 })
     }
     
-    const taskTypes = await prisma.taskType.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' }
-    })
+    const taskTypes = await withRetry(() =>
+      prisma.taskType.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' }
+      })
+    )
     
     return NextResponse.json(taskTypes)
   } catch (error) {
@@ -38,14 +63,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const taskType = await prisma.taskType.create({
-      data: {
-        name,
-        defaultDifficulty: default_difficulty,
-        defaultWeight: default_weight,
-        userId: user_id
-      }
-    })
+    const taskType = await withRetry(() =>
+      prisma.taskType.create({
+        data: {
+          name,
+          defaultDifficulty: default_difficulty,
+          defaultWeight: default_weight,
+          userId: user_id
+        }
+      })
+    )
 
     return NextResponse.json(taskType, { status: 201 })
   } catch (error) {
@@ -70,14 +97,16 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const taskType = await prisma.taskType.update({
-      where: { id },
-      data: {
-        name,
-        defaultDifficulty: default_difficulty,
-        defaultWeight: default_weight
-      }
-    })
+    const taskType = await withRetry(() =>
+      prisma.taskType.update({
+        where: { id },
+        data: {
+          name,
+          defaultDifficulty: default_difficulty,
+          defaultWeight: default_weight
+        }
+      })
+    )
 
     return NextResponse.json(taskType)
   } catch (error) {
@@ -102,10 +131,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Check if any tasks are using this task type
-    const taskCount = await prisma.task.count({
-      where: { typeId: id }
-    })
+    // Check if any tasks are using this task type with retry
+    const taskCount = await withRetry(() =>
+      prisma.task.count({
+        where: { typeId: id }
+      })
+    )
     
     if (taskCount > 0) {
       return NextResponse.json(
@@ -114,9 +145,11 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await prisma.taskType.delete({
-      where: { id }
-    })
+    await withRetry(() =>
+      prisma.taskType.delete({
+        where: { id }
+      })
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

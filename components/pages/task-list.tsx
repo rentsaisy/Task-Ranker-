@@ -211,7 +211,7 @@ export default function TaskListPage() {
                       <td className="py-3 px-5 text-muted-foreground">{task.task_type_name || 'N/A'}</td>
                       <td className="py-3 px-5 text-muted-foreground flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        {new Date(task.due_date).toLocaleDateString()}
+                        {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No deadline'}
                       </td>
                       <td className="py-3 px-5 text-center">
                         <div className="flex items-center justify-center gap-2">

@@ -42,7 +42,7 @@ model Task {
   description String?
   priority  Int        @default(0)
   taskType  String?
-  // dueDate   DateTime?  // TEMPORARILY DISABLED - database column missing
+  dueDate   DateTime?
   completed Boolean    @default(false)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
