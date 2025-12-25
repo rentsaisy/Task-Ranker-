@@ -1,24 +1,25 @@
-import mysql from 'mysql2/promise'
+import { PrismaClient } from '@prisma/client'
 
-// Create a connection pool to MySQL
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'taskranker_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-})
+// Create a single Prisma Client instance
+const prismaClientSingleton = () => {
+  return new PrismaClient()
+}
+
+declare global {
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>
+}
+
+const prisma = globalThis.prisma ?? prismaClientSingleton()
+
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma
 
 // Test the connection
-pool.getConnection()
-  .then(connection => {
+prisma.$connect()
+  .then(() => {
     console.log('✅ Database connected successfully')
-    connection.release()
   })
-  .catch(err => {
+  .catch((err: Error) => {
     console.error('❌ Database connection failed:', err.message)
   })
 
-export default pool
+export default prisma
