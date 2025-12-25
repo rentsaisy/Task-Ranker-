@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import prisma from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -22,12 +22,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const [existingUsers]: any = await pool.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    )
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    })
 
-    if (existingUsers.length > 0) {
+    if (existingUser) {
       return NextResponse.json(
         { error: 'Email already registered' },
         { status: 409 }
@@ -37,20 +36,23 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Insert new user
-    const [result]: any = await pool.query(
-      'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
-      [name, email, hashedPassword]
-    )
+    // Create new user
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword
+      }
+    })
 
-    // Return user data (image will be handled on frontend as default person icon)
+    // Return user data
     return NextResponse.json(
       { 
         success: true,
         user: {
-          id: result.insertId,
-          name,
-          email
+          id: user.id,
+          name: user.name,
+          email: user.email
         }
       },
       { status: 201 }
@@ -61,12 +63,8 @@ export async function POST(request: NextRequest) {
     // Provide more specific error messages
     let errorMessage = 'An error occurred during registration'
     
-    if (error.code === 'ECONNREFUSED') {
-      errorMessage = 'Database connection failed. Make sure MySQL is running in Laragon.'
-    } else if (error.code === 'ER_NO_SUCH_TABLE') {
-      errorMessage = 'Database tables not found. Please run the database setup SQL.'
-    } else if (error.code === 'ER_BAD_DB_ERROR') {
-      errorMessage = 'Database "taskranker_db" not found. Please create it in Laragon.'
+    if (error.code === 'P2002') {
+      errorMessage = 'Email already registered'
     } else if (error.message) {
       errorMessage = error.message
     }

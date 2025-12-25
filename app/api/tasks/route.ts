@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import prisma from '@/lib/db'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
@@ -29,23 +29,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     
-    let query = `
-      SELECT t.*, tt.name as task_type_name, tt.default_difficulty, tt.default_weight
-      FROM tasks t
-      LEFT JOIN task_types tt ON t.task_type_id = tt.id
-    `
-    const params: any[] = []
+    const tasks = await prisma.task.findMany({
+      where: userId ? { userId } : {},
+      include: { type: true },
+      orderBy: [
+        { priorityScore: 'desc' },
+        { dueDate: 'asc' }
+      ]
+    })
     
-    if (userId) {
-      query += ' WHERE t.user_id = ?'
-      params.push(userId)
-    }
-    
-    query += ' ORDER BY t.priority_score DESC, t.due_date ASC'
-    
-    const [rows] = await pool.query(query, params)
-    
-    return NextResponse.json(rows, { status: 200 })
+    return NextResponse.json(tasks, { status: 200 })
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
@@ -73,19 +66,20 @@ export async function POST(request: NextRequest) {
     let weight = 5
     
     if (task_type_id) {
-      const [taskTypes]: any = await pool.query(
-        'SELECT default_difficulty, default_weight FROM task_types WHERE id = ?',
-        [task_type_id]
-      )
-      if (taskTypes.length > 0) {
-        difficulty = taskTypes[0].default_difficulty
-        weight = taskTypes[0].default_weight
+      const taskType = await prisma.taskType.findUnique({
+        where: { id: task_type_id }
+      })
+      if (taskType) {
+        difficulty = taskType.defaultDifficulty
+        weight = taskType.defaultWeight
       }
     }
     
-    // Check if tasks table is empty
-    const [taskCountRows]: any = await pool.query('SELECT COUNT(*) as count FROM tasks')
-    const isFirstTask = taskCountRows[0].count === 0
+    // Check task count for this user
+    const taskCount = await prisma.task.count({
+      where: { userId: user_id }
+    })
+    const isFirstTask = taskCount === 0
 
     // Calculate priority using ML model or set to 100 if first task
     let priority_score = 100
@@ -97,70 +91,22 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Insert task into database
-    const [result]: any = await pool.query(
-      `INSERT INTO tasks (user_id, task_type_id, title, due_date, priority_score, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
-      [user_id, task_type_id || null, title, due_date, priority_score]
-    )
-
-    // Recalculate priority for all tasks for this user using ML model (same as refresh)
-    const [userTasks]: any = await pool.query('SELECT id, due_date, task_type_id FROM tasks WHERE user_id = ?', [user_id])
-    // Get difficulty, weight, and type for each task
-    const tasksWithFeatures = await Promise.all(
-      userTasks.map(async (task: any) => {
-        let diff = 5, w = 5, typeName = ''
-        if (task.task_type_id) {
-          const [tt]: any = await pool.query('SELECT name, default_difficulty, default_weight FROM task_types WHERE id = ?', [task.task_type_id])
-          if (tt.length > 0) {
-            diff = tt[0].default_difficulty
-            w = tt[0].default_weight
-            typeName = tt[0].name
-          }
-        }
-        return {
-          id: task.id,
-          due_date: task.due_date,
-          difficulty: diff,
-          weight: w,
-          type: typeName
-        }
-      })
-    )
-
-    // Batch ML prediction (type, deadline, difficulty, weight)
-    const inputForML = tasksWithFeatures.map(t => ({ due_date: t.due_date, difficulty: t.difficulty, weight: t.weight, type: t.type }))
-    const scriptPath = path.join(process.cwd(), 'ml_model', 'task_priority_model.py')
-    const inputJson = JSON.stringify(inputForML)
-    // Escape double quotes for shell
-    const safeInputJson = inputJson.replace(/"/g, '\"');
-    const pythonCommand = `python "${scriptPath}" "${safeInputJson}"`;
-    let priorities: number[] = [];
-    try {
-      const { stdout } = await execAsync(pythonCommand, { timeout: 10000 });
-      const result = JSON.parse(stdout.trim());
-      priorities = result.priorities || [];
-      // Always normalize so sum = 100
-      const sum = priorities.reduce((a, b) => a + b, 0)
-      if (sum !== 100 && priorities.length > 0) {
-        priorities = priorities.map(p => +(p * 100 / sum).toFixed(2))
-      }
-    } catch (err) {
-      console.error('Batch ML error:', err);
-      priorities = tasksWithFeatures.map(() => +(100 / tasksWithFeatures.length).toFixed(2));
-    }
-
-    // Update each task's priority_score
-    await Promise.all(
-      tasksWithFeatures.map((task, idx) =>
-        pool.query('UPDATE tasks SET priority_score = ? WHERE id = ?', [priorities[idx] || 0, task.id])
-      )
-    )
+    // Create task
+    const task = await prisma.task.create({
+      data: {
+        userId: user_id,
+        typeId: task_type_id || null,
+        title,
+        dueDate: new Date(due_date),
+        priorityScore: priority_score
+      },
+      include: { type: true }
+    })
 
     return NextResponse.json(
       { 
         success: true, 
-        id: result.insertId,
+        id: task.id,
         priority_score 
       },
       { status: 201 }
@@ -187,7 +133,9 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    await pool.query('DELETE FROM tasks WHERE id = ?', [id])
+    await prisma.task.delete({
+      where: { id }
+    })
     
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
@@ -217,13 +165,12 @@ export async function PUT(request: NextRequest) {
     let weight = 5
     
     if (task_type_id) {
-      const [taskTypes]: any = await pool.query(
-        'SELECT default_difficulty, default_weight FROM task_types WHERE id = ?',
-        [task_type_id]
-      )
-      if (taskTypes.length > 0) {
-        difficulty = taskTypes[0].default_difficulty
-        weight = taskTypes[0].default_weight
+      const taskType = await prisma.taskType.findUnique({
+        where: { id: task_type_id }
+      })
+      if (taskType) {
+        difficulty = taskType.defaultDifficulty
+        weight = taskType.defaultWeight
       }
     }
     
@@ -234,12 +181,15 @@ export async function PUT(request: NextRequest) {
       weight
     })
     
-    await pool.query(
-      `UPDATE tasks 
-       SET task_type_id = ?, title = ?, due_date = ?, priority_score = ?, updated_at = NOW()
-       WHERE id = ?`,
-      [task_type_id || null, title, due_date, priority_score, id]
-    )
+    await prisma.task.update({
+      where: { id },
+      data: {
+        typeId: task_type_id || null,
+        title,
+        dueDate: new Date(due_date),
+        priorityScore: priority_score
+      }
+    })
     
     return NextResponse.json({ success: true, priority_score }, { status: 200 })
   } catch (error) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import prisma from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -15,22 +15,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email or name
-    const [rows]: any = await pool.query(
-      'SELECT * FROM users WHERE email = ? OR name = ?',
-      [identifier, identifier]
-    )
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: identifier },
+          { name: identifier }
+        ]
+      }
+    })
 
-    if (rows.length === 0) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Invalid username/email or password' },
         { status: 401 }
       )
     }
 
-    const user = rows[0]
-
     // Compare password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash)
+    const isValidPassword = await bcrypt.compare(password, user.password)
 
     if (!isValidPassword) {
       return NextResponse.json(
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return user data (exclude password)
-    const { password_hash: _, ...userWithoutPassword } = user
+    const { password: _, ...userWithoutPassword } = user
 
     return NextResponse.json(
       { 
