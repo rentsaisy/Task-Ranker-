@@ -19,7 +19,21 @@ model User {
   updatedAt DateTime   @updatedAt
 
   tasks     Task[]
+  taskTypes TaskType[]
   focusSessions FocusSession[]
+}
+
+model TaskType {
+  id                 String   @id @default(cuid())
+  name               String
+  defaultDifficulty  Int      @default(5)
+  defaultWeight      Int      @default(5)
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Task {
