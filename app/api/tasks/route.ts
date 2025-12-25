@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
       where: userId ? { userId } : {},
       include: { type: true },
       orderBy: [
-        { priorityScore: 'desc' },
-        { dueDate: 'asc' }
+        { priority: 'desc' },
+        { createdAt: 'asc' }
       ]
     })
     
@@ -97,8 +97,7 @@ export async function POST(request: NextRequest) {
         userId: user_id,
         typeId: task_type_id || null,
         title,
-        dueDate: new Date(due_date),
-        priorityScore: priority_score
+        priority: Math.round(priority_score)
       },
       include: { type: true }
     })
@@ -186,8 +185,7 @@ export async function PUT(request: NextRequest) {
       data: {
         typeId: task_type_id || null,
         title,
-        dueDate: new Date(due_date),
-        priorityScore: priority_score
+        priority: Math.round(priority_score)
       }
     })
     

@@ -1,69 +1,32 @@
 import { NextRequest, NextResponse } from "next/server"
-import mysql from "mysql2/promise"
-
-const dbConfig = {
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "taskranker_db",
-}
+import prisma from "@/lib/db"
 
 // GET - Fetch all task types
 export async function GET(request: NextRequest) {
-  let connection
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
     if (!userId) {
       return NextResponse.json([], { status: 200 })
     }
-    connection = await mysql.createConnection(dbConfig)
-    const [rows] = await connection.execute(
-      "SELECT id, user_id, name, default_difficulty, default_weight, created_at FROM task_types WHERE user_id = ? ORDER BY created_at DESC",
-      [userId]
-    )
-    return NextResponse.json(rows)
+    
+    const taskTypes = await prisma.taskType.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    })
+    
+    return NextResponse.json(taskTypes)
   } catch (error) {
     console.error("Database error:", error)
     return NextResponse.json(
       { error: "Failed to fetch task types" },
       { status: 500 }
     )
-  } finally {
-    if (connection) await connection.end()
-  }
-
-}
-
-// GET with userId filtering
-export async function GET_WITH_USER(request: NextRequest) {
-  let connection
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 })
-    }
-    connection = await mysql.createConnection(dbConfig)
-    const [rows] = await connection.execute(
-      "SELECT id, user_id, name, default_difficulty, default_weight, created_at FROM task_types WHERE user_id = ? ORDER BY created_at DESC",
-      [userId]
-    )
-    return NextResponse.json(rows)
-  } catch (error) {
-    console.error("Database error:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch task types" },
-      { status: 500 }
-    )
-  } finally {
-    if (connection) await connection.end()
   }
 }
 
 // POST - Create a new task type
 export async function POST(request: NextRequest) {
-  let connection
   try {
     const body = await request.json()
     const { name, default_difficulty, default_weight, user_id } = body
@@ -75,33 +38,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    connection = await mysql.createConnection(dbConfig)
-    const [result] = await connection.execute(
-      "INSERT INTO task_types (name, default_difficulty, default_weight, user_id) VALUES (?, ?, ?, ?)",
-      [name, default_difficulty, default_weight, user_id]
-    )
+    const taskType = await prisma.taskType.create({
+      data: {
+        name,
+        defaultDifficulty: default_difficulty,
+        defaultWeight: default_weight,
+        userId: user_id
+      }
+    })
 
-    const insertId = (result as any).insertId
-    const [rows] = await connection.execute(
-      "SELECT id, user_id, name, default_difficulty, default_weight, created_at FROM task_types WHERE id = ?",
-      [insertId]
-    ) as any
-
-    return NextResponse.json(rows[0], { status: 201 })
+    return NextResponse.json(taskType, { status: 201 })
   } catch (error) {
     console.error("Database error:", error)
     return NextResponse.json(
       { error: "Failed to create task type" },
       { status: 500 }
     )
-  } finally {
-    if (connection) await connection.end()
   }
 }
 
 // PUT - Update a task type
 export async function PUT(request: NextRequest) {
-  let connection
   try {
     const body = await request.json()
     const { id, name, default_difficulty, default_weight } = body
@@ -113,32 +70,27 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    connection = await mysql.createConnection(dbConfig)
-    await connection.execute(
-      "UPDATE task_types SET name = ?, default_difficulty = ?, default_weight = ? WHERE id = ?",
-      [name, default_difficulty, default_weight, id]
-    )
+    const taskType = await prisma.taskType.update({
+      where: { id },
+      data: {
+        name,
+        defaultDifficulty: default_difficulty,
+        defaultWeight: default_weight
+      }
+    })
 
-    const [rows] = await connection.execute(
-      "SELECT id, name, default_difficulty, default_weight, created_at FROM task_types WHERE id = ?",
-      [id]
-    ) as any
-
-    return NextResponse.json(rows[0])
+    return NextResponse.json(taskType)
   } catch (error) {
     console.error("Database error:", error)
     return NextResponse.json(
       { error: "Failed to update task type" },
       { status: 500 }
     )
-  } finally {
-    if (connection) await connection.end()
   }
 }
 
 // DELETE - Delete a task type
 export async function DELETE(request: NextRequest) {
-  let connection
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
@@ -150,15 +102,11 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    connection = await mysql.createConnection(dbConfig)
-    
     // Check if any tasks are using this task type
-    const [tasks] = await connection.execute(
-      "SELECT COUNT(*) as count FROM tasks WHERE task_type_id = ?",
-      [id]
-    )
+    const taskCount = await prisma.task.count({
+      where: { typeId: id }
+    })
     
-    const taskCount = (tasks as any)[0].count
     if (taskCount > 0) {
       return NextResponse.json(
         { error: `Cannot delete task type. ${taskCount} task(s) are using this type.` },
@@ -166,7 +114,9 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await connection.execute("DELETE FROM task_types WHERE id = ?", [id])
+    await prisma.taskType.delete({
+      where: { id }
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -175,7 +125,5 @@ export async function DELETE(request: NextRequest) {
       { error: "Failed to delete task type" },
       { status: 500 }
     )
-  } finally {
-    if (connection) await connection.end()
   }
 }
