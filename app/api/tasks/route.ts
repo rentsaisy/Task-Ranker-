@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
     
     const tasks = await prisma.task.findMany({
       where: userId ? { userId } : {},
-      include: { type: true },
       orderBy: [
         { priority: 'desc' },
         { createdAt: 'asc' }
@@ -95,11 +94,10 @@ export async function POST(request: NextRequest) {
     const task = await prisma.task.create({
       data: {
         userId: user_id,
-        typeId: task_type_id || null,
+        taskType: task_type_id || null,
         title,
         priority: Math.round(priority_score)
-      },
-      include: { type: true }
+      }
     })
 
     return NextResponse.json(
@@ -183,7 +181,7 @@ export async function PUT(request: NextRequest) {
     await prisma.task.update({
       where: { id },
       data: {
-        typeId: task_type_id || null,
+        taskType: task_type_id || null,
         title,
         priority: Math.round(priority_score)
       }
