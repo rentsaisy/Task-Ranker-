@@ -28,8 +28,8 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
 // Using formula: base + difficulty_weight + deadline_urgency
 function calculatePriority(taskData: { due_date: string; difficulty: number; weight: number }): number {
   // Base priority from difficulty and weight (0-50)
-  const difficultyScore = Math.min(difficulty * 5, 50)
-  const weightScore = Math.min(weight * 5, 50)
+  const difficultyScore = Math.min(taskData.difficulty * 5, 50)
+  const weightScore = Math.min(taskData.weight * 5, 50)
   const baseScore = Math.min((difficultyScore + weightScore) / 2, 50)
   
   // Deadline urgency bonus (0-50)
