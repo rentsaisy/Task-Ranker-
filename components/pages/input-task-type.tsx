@@ -379,14 +379,14 @@ export default function InputTaskTypePage() {
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground">Difficulty:</span>
                               <div className="flex gap-1">
-                                {Array.from({ length: taskType.default_difficulty }).map((_, i) => (
+                                {Array.from({ length: taskType.defaultDifficulty }).map((_, i) => (
                                   <div key={i} className="w-1.5 h-4 bg-primary rounded-sm" />
                                 ))}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground">Weight:</span>
-                              <span className="text-accent font-semibold">{taskType.default_weight}/10</span>
+                              <span className="text-accent font-semibold">{taskType.defaultWeight}/10</span>
                             </div>
                           </div>
                         </div>
