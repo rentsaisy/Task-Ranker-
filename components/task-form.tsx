@@ -10,10 +10,10 @@ interface TaskFormProps {
 }
 
 interface TaskType {
-  id: number
+  id: string
   name: string
-  default_difficulty: number
-  default_weight: number
+  defaultDifficulty: number
+  defaultWeight: number
 }
 
 export default function TaskForm({ onAddTask }: TaskFormProps) {
@@ -85,7 +85,7 @@ export default function TaskForm({ onAddTask }: TaskFormProps) {
     setShowLoading(true)
     onAddTask({
       ...formData,
-      task_type_id: parseInt(formData.task_type_id)
+      task_type_id: formData.task_type_id
     })
     setFormData({ 
       name: "", 

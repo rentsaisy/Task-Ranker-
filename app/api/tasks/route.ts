@@ -90,12 +90,16 @@ export async function GET(request: NextRequest) {
           try {
             const taskTypeObj = await withRetry(() =>
               prisma.taskType.findUnique({
-                where: { id: task.taskType }
+                where: { 
+                  id: task.taskType || undefined
+                }
               })
             )
-            taskTypeName = taskTypeObj?.name || 'N/A'
+            if (taskTypeObj) {
+              taskTypeName = taskTypeObj.name
+            }
           } catch (error) {
-            console.error('Failed to fetch task type:', error)
+            console.error('Failed to fetch task type for id:', task.taskType, error)
             // Keep 'N/A' as fallback
           }
         }
@@ -149,9 +153,11 @@ export async function POST(request: NextRequest) {
           where: { id: task_type_id }
         })
       )
-      if (taskType) {
+      if (taskType && taskType.userId === user_id) {
         difficulty = taskType.defaultDifficulty
         weight = taskType.defaultWeight
+      } else if (!taskType) {
+        console.warn(`Task type with id ${task_type_id} not found`)
       }
     }
     
