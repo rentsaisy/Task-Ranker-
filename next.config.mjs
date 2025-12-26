@@ -6,7 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['node-cron'],
+  serverExternalPackages: ['node-cron', '@prisma/client'],
 }
 
 export default nextConfig

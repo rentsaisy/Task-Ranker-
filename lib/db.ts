@@ -13,13 +13,15 @@ const prisma = globalThis.prisma ?? prismaClientSingleton()
 
 if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma
 
-// Test the connection
-prisma.$connect()
-  .then(() => {
-    console.log('✅ Database connected successfully')
-  })
-  .catch((err: Error) => {
-    console.error('❌ Database connection failed:', err.message)
-  })
+// Only test connection during runtime, not during build
+if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production') {
+  prisma.$connect()
+    .then(() => {
+      console.log('✅ Database connected successfully')
+    })
+    .catch((err: Error) => {
+      console.error('❌ Database connection failed:', err.message)
+    })
+}
 
 export default prisma
