@@ -4,10 +4,10 @@ import { Plus, Brain, CheckCircle, Trash2, Edit, AlertTriangle, ChevronLeft, Che
 import { useState, useEffect } from "react"
 
 interface TaskType {
-  id: number
+  id: string
   name: string
-  default_difficulty: number
-  default_weight: number
+  defaultDifficulty: number
+  defaultWeight: number
 }
 
 export default function InputTaskTypePage() {
@@ -16,8 +16,8 @@ export default function InputTaskTypePage() {
           setEditingId(taskType.id)
           setFormData({
             name: taskType.name,
-            difficulty: taskType.default_difficulty,
-            weight: taskType.default_weight,
+            difficulty: taskType.defaultDifficulty,
+            weight: taskType.defaultWeight,
           })
         }
 
@@ -40,7 +40,7 @@ export default function InputTaskTypePage() {
     weight: 5,
   })
 
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingTaskType, setDeletingTaskType] = useState<TaskType | null>(null)
@@ -254,7 +254,7 @@ export default function InputTaskTypePage() {
                   <input
                     type="text"
                     placeholder="Practicum report, Reminder, etc."
-                    value={formData.name}
+                    value={formData.name || ""}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3 py-1.5 rounded-lg bg-input border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all smooth-transition"
                     required
@@ -272,7 +272,7 @@ export default function InputTaskTypePage() {
                     type="range"
                     min="1"
                     max="5"
-                    value={formData.difficulty}
+                    value={formData.difficulty || 3}
                     onChange={(e) => setFormData({ ...formData, difficulty: Number.parseInt(e.target.value) })}
                     className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
                   />
@@ -294,7 +294,7 @@ export default function InputTaskTypePage() {
                     type="range"
                     min="1"
                     max="10"
-                    value={formData.weight}
+                    value={formData.weight || 5}
                     onChange={(e) => setFormData({ ...formData, weight: Number.parseInt(e.target.value) })}
                     className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
                   />
